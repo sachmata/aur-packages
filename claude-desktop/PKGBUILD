@@ -1,0 +1,228 @@
+# Maintainer: Kevin <developer@kev314.dev>
+
+# This PKGBUILD repackages Anthropic's official Debian package for Arch.
+# Only the .deb's file payload (data.tar.xz) is used. Of its maintainer
+# scripts, the apt repository registration and the AppArmor exception for
+# Ubuntu's user namespace restriction are Debian/Ubuntu-specific and not
+# reproduced; the files postinst copies out of the app (MIME types, GNOME
+# search provider, ccd launcher) are installed by package() instead.
+
+pkgname=claude-desktop
+pkgver=2.31226.1
+pkgrel=1
+pkgdesc="Official Claude AI desktop app from Anthropic — Chat, Cowork, and Claude Code"
+arch=('x86_64' 'aarch64')
+url="https://claude.com/download"
+license=('LicenseRef-Proprietary')
+
+# Runtime dependencies, from two sources:
+#  - the .deb's "Depends:" field, translated to Arch names (Debian and
+#    Arch name the same libraries differently, e.g. libgtk-3-0 -> gtk3);
+#  - libraries namcap verified the shipped binaries link directly
+#    (cairo, dbus, libx11, ... — otherwise they would only be reachable
+#    transitively through gtk3's own dependencies, which is fragile).
+# alsa-lib is only a "Recommends:" on Debian, but Chromium needs it for
+# audio output, so it is a hard dependency here.
+# namcap flags some of these as "may not be needed": those are loaded
+# with dlopen(), spawned as programs, or used via D-Bus, all invisible
+# to namcap's ELF-header analysis. They are needed.
+depends=('alsa-lib'
+         'at-spi2-core'
+         'bubblewrap'
+         'cairo'
+         'dbus'
+         'expat'
+         'gcc-libs'
+         'glib2'
+         'glibc'
+         'gtk3'
+         'hicolor-icon-theme'
+         'libcap-ng'
+         'libcups'
+         'libdrm'
+         'libnotify'
+         'libpipewire'
+         'libseccomp'
+         'libsecret'
+         'libx11'
+         'libxcb'
+         'libxcomposite'
+         'libxdamage'
+         'libxext'
+         'libxfixes'
+         'libxkbcommon'
+         'libxrandr'
+         'libxtst'
+         'mesa'
+         'nspr'
+         'nss'
+         'pango'
+         'socat'
+         'systemd-libs'
+         'util-linux-libs'
+         'virtiofsd'
+         'xdg-desktop-portal'
+         'xdg-utils')
+
+# The Cowork feature runs its sandbox inside a QEMU virtual machine.
+# Upstream ships the VM stack under "Recommends:", which apt installs by
+# default — depending on it here gives Arch users the same out-of-the-box
+# experience.
+depends_x86_64=('qemu-system-x86' 'edk2-ovmf')
+# On aarch64 the VM stack stays optional: Arch Linux ARM packages QEMU but
+# no edk2 firmware, so a hard dependency would make the package
+# uninstallable there, and without firmware Cowork cannot start anyway.
+optdepends_aarch64=('qemu-system-aarch64: run Cowork tasks in a local virtual machine'
+                    'edk2-aarch64: UEFI firmware for the Cowork virtual machine')
+
+optdepends=('gjs: GNOME Shell search provider for Claude sessions'
+            'gnome-keyring: credential storage via Secret Service (GNOME)'
+            'kwallet: credential storage (KDE Plasma)'
+            'libayatana-appindicator: system tray icon'
+            'xdg-desktop-portal-gtk: portal backend for GTK desktops'
+            'xdg-desktop-portal-kde: portal backend for KDE Plasma')
+
+conflicts=('claude' 'claude-desktop-bin')
+
+# makepkg normally strips debug symbols from binaries after package().
+# These are prebuilt Electron/Chromium binaries: stripping can corrupt
+# them (embedded resources, V8 snapshot data) and saves nothing, so it
+# is disabled. !debug disables the companion -debug package, which only
+# makes sense when compiling from source.
+options=('!strip' '!debug')
+
+_repo="https://downloads.claude.ai/claude-desktop/apt/stable"
+_pool="pool/main/c/${pkgname}"
+source=("${pkgname}.sh"
+        "${pkgname}-${pkgver}-${pkgrel}-Release::${_repo}/dists/stable/Release"
+        "${pkgname}-${pkgver}-${pkgrel}-Release.sig::${_repo}/dists/stable/Release.gpg")
+source_x86_64=("${_repo}/${_pool}/${pkgname}_${pkgver}_amd64.deb"
+               "${pkgname}-${pkgver}-${pkgrel}-x86_64-Packages::${_repo}/dists/stable/main/binary-amd64/Packages")
+source_aarch64=("${_repo}/${_pool}/${pkgname}_${pkgver}_arm64.deb"
+                "${pkgname}-${pkgver}-${pkgrel}-aarch64-Packages::${_repo}/dists/stable/main/binary-arm64/Packages")
+# The repository metadata changes with every release; it is verified by the
+# Release signature and the checks in prepare() instead
+sha256sums=('2b50c019e70b263750255c446bab8db6ab1e50c7396d37ef6547cf118131da65'
+            'SKIP'
+            'SKIP')
+sha256sums_x86_64=('5a9bebdfcb1df6ce38767b373f3a7fabf77156a2ddd8a3f5d04961da5bde305e'
+                   'SKIP')
+sha256sums_aarch64=('d2f57a38ffc73cfda660f8772a5f8bada05e6d74399948a268c6f5d53593ee8f'
+                    'SKIP')
+validpgpkeys=('31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE') # Anthropic Claude Code Release Signing <security@anthropic.com>
+
+prepare() {
+  local _debarch
+  case $CARCH in
+    x86_64) _debarch=amd64 ;;
+    aarch64) _debarch=arm64 ;;
+  esac
+  local _packages="${pkgname}-${pkgver}-${pkgrel}-${CARCH}-Packages"
+  local _deb="${pkgname}_${pkgver}_${_debarch}.deb"
+
+  # Validate the Packages index against the SHA256 section of the signed
+  # Release file
+  awk -v index_path="main/binary-${_debarch}/Packages" -v file="$_packages" '
+    /^[^ ]/ { section = $1 }
+    section == "SHA256:" && $3 == index_path { print $1 "  " file }
+  ' "${pkgname}-${pkgver}-${pkgrel}-Release" > "$_packages.sha256"
+  [[ -s $_packages.sha256 ]] || { echo "Packages index missing from signed Release" >&2; return 1; }
+  sha256sum -c "$_packages.sha256"
+
+  # Validate the deb against its own entry in the Packages index. The index
+  # keeps older releases, so pinned versions stay verifiable after upstream
+  # moves on
+  awk -v filename="${_pool}/${_deb}" -v file="$_deb" '
+    BEGIN { RS = ""; FS = "\n" }
+    {
+      found = 0; sum = ""
+      for (i = 1; i <= NF; i++) {
+        if ($i == "Filename: " filename) found = 1
+        if ($i ~ /^SHA256: /) sum = substr($i, 9)
+      }
+      if (found) print sum "  " file
+    }
+  ' "$_packages" > "$_deb.sha256"
+  [[ -s $_deb.sha256 ]] || { echo "${_deb} not listed in signed Packages index" >&2; return 1; }
+  sha256sum -c "$_deb.sha256"
+}
+
+package() {
+  # A .deb is an ar archive, which makepkg unpacks like any other source:
+  # $srcdir holds debian-binary, control.tar.xz (package metadata and the
+  # maintainer scripts, both unused here) and data.tar.xz — the file
+  # payload, which is the entire package.
+  tar -xf data.tar.xz -C "$pkgdir"
+
+  # Upstream's /usr/bin/claude-desktop is a bare symlink to the Electron
+  # binary, which leaves Electron on its X11 default and therefore on
+  # XWayland under Wayland compositors (blurry on scaled displays). Replace
+  # it with a launcher that selects the Wayland backend when appropriate
+  # and honours ~/.config/claude-desktop-flags.conf.
+  rm -f "$pkgdir/usr/bin/claude-desktop"
+  install -Dm755 "$pkgname.sh" "$pkgdir/usr/bin/claude-desktop"
+
+  # chrome-sandbox is Chromium's setuid sandbox helper, only used when
+  # unprivileged user namespaces are unavailable. Arch kernels enable them
+  # and Chromium then uses the namespace sandbox, so drop the setuid bit
+  # rather than ship an unused setuid-root binary. On kernels without
+  # unprivileged user namespaces (e.g. linux-hardened) the app will refuse
+  # to start; restore the bit there with chmod 4755.
+  chmod 0755 "$pkgdir/usr/lib/claude-desktop/chrome-sandbox"
+
+  # lintian is Debian's package linter; its override file has no
+  # consumer on Arch.
+  rm -r "$pkgdir/usr/share/lintian"
+
+  # --- Files upstream's postinst copies out of the app -----------------
+  local _resources="$pkgdir/usr/lib/claude-desktop/resources"
+
+  # MIME types for .mcpb/.dxt extensions and .skill files, which the
+  # desktop file claims. pacman's shared-mime-info hook updates the cache.
+  install -Dm644 "$_resources/linux-mime/com.anthropic.Claude.xml" \
+    "$pkgdir/usr/share/mime/packages/com.anthropic.Claude.xml"
+
+  # GNOME Shell search provider: D-Bus activated, runs a bundled gjs script
+  install -Dm644 "$_resources/gnome-search-provider/com.anthropic.Claude.search-provider.ini" \
+    "$pkgdir/usr/share/gnome-shell/search-providers/com.anthropic.Claude.search-provider.ini"
+  install -Dm644 "$_resources/gnome-search-provider/com.anthropic.Claude.SearchProvider.service" \
+    "$pkgdir/usr/share/dbus-1/services/com.anthropic.Claude.SearchProvider.service"
+
+  # ccd terminal launcher, only shipped by some builds
+  if [[ -x $_resources/bin/ccd ]]; then
+    ln -s ../lib/claude-desktop/resources/bin/ccd "$pkgdir/usr/bin/ccd"
+  fi
+
+  # --- Cowork compatibility shims -------------------------------------
+  # The app hardcodes Debian's filesystem paths for the Cowork VM stack;
+  # these symlinks map them to where Arch actually installs the pieces.
+  #
+  # virtiofsd: Debian ships it in /usr/bin, Arch in /usr/lib.
+  ln -s ../lib/virtiofsd "$pkgdir/usr/bin/virtiofsd"
+
+  # UEFI firmware: on x86_64 the app opens /usr/share/OVMF/OVMF_CODE_4M.fd
+  # (Debian naming). On Arch, /usr/share/OVMF is a compat symlink to
+  # /usr/share/edk2 (owned by our edk2-ovmf dependency), so links with
+  # the Debian names are placed in /usr/share/edk2, pointing at the real
+  # firmware in its x64/ subdirectory. Verified against edk2-ovmf 202605.
+  #
+  # aarch64 needs no such shim: there the app opens
+  # /usr/share/AAVMF/AAVMF_CODE.fd, and edk2-aarch64 installs the firmware
+  # under exactly that Debian-compatible path.
+  if [[ $CARCH == x86_64 ]]; then
+    install -d "$pkgdir/usr/share/edk2"
+    ln -s x64/OVMF_CODE.4m.fd "$pkgdir/usr/share/edk2/OVMF_CODE_4M.fd"
+    ln -s x64/OVMF_VARS.4m.fd "$pkgdir/usr/share/edk2/OVMF_VARS_4M.fd"
+  fi
+  #
+  # Cowork's host<->VM channel also needs the vhost_vsock kernel module,
+  # but no configuration is shipped for it: the module declares a
+  # devname alias ("devname:vhost-vsock"), so its device node exists at
+  # boot and the kernel auto-loads the module on first open (verified on
+  # a live Cowork session).
+
+  # Arch convention: every package with a non-common license installs
+  # its license text under /usr/share/licenses/<pkgname>/.
+  install -Dm644 "$pkgdir/usr/share/doc/claude-desktop/copyright" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

@@ -27,3 +27,8 @@ docker-credential-secretservice-bin/LICENSE-*
 claude-code/claude-*
 claude-code/claude-code-*-manifest.json*
 claude-code/cc-legal-*
+
+# claude-desktop: repository metadata fetched at build time
+claude-desktop/*-Release
+claude-desktop/*-Release.sig
+claude-desktop/*-Packages
