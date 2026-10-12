@@ -1,0 +1,20 @@
+# makepkg build artifacts
+src/
+pkg/
+*.pkg.tar.*
+*.log
+
+# Downloaded sources
+*.deb
+*.tar.gz
+*.tar.xz
+*.tar.zst
+*.zip
+*.AppImage
+
+# spotify: repository metadata fetched at build time
+spotify/*-Release
+spotify/*-Release.sig
+spotify/*-Packages
+spotify/*.sha256
+spotify/*.sha512

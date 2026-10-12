@@ -1,0 +1,36 @@
+pkgbase = spotify
+	pkgdesc = A proprietary music streaming service
+	pkgver = 1.3.4.258
+	pkgrel = 1
+	epoch = 1
+	url = https://www.spotify.com
+	arch = x86_64
+	license = LicenseRef-Spotify
+	depends = alsa-lib>=1.0.14
+	depends = gtk3
+	depends = libxss
+	depends = nss
+	depends = at-spi2-core
+	depends = libcurl-gnutls
+	depends = mesa
+	depends = libayatana-appindicator
+	depends = libayatana-indicator
+	optdepends = ffmpeg4.4: Adds support for playback of local files
+	optdepends = zenity: Adds support for importing local files
+	optdepends = libnotify: Desktop notifications
+	options = !strip
+	source = spotify-1.3.4.258-gc60b10b0946a-x86_64.deb::https://repository.spotify.com/pool/non-free/s/spotify-client/spotify-client_1.3.4.258.gc60b10b0946a_amd64.deb
+	source = spotify.sh
+	source = LICENSE
+	source = spotify-1.3.4.258-1-Release::https://repository.spotify.com/dists/testing/Release
+	source = spotify-1.3.4.258-1-Release.sig::https://repository.spotify.com/dists/testing/Release.gpg
+	source = spotify-1.3.4.258-1-x86_64-Packages::https://repository.spotify.com/dists/testing/non-free/binary-amd64/Packages
+	validpgpkeys = E1096BCBFF6D418796DE78515384CE82BA52C83A
+	sha512sums = ad2198da6be2f3286a661d0315c124cb94c51084fabf630e34a296f3683599f1d8067e95512c150ed04b3c86526c8a0cff9b93584b39a145befaf6c478deb883
+	sha512sums = 933073790be362d21a584fa482e9970ba5e1f1d23d3529f01f349a23353cf690be12d24cdf876e262cfcf1b3e6e07b6ad012b2959b6af9e96093d6e79a28dfa9
+	sha512sums = 2e16f7c7b09e9ecefaa11ab38eb7a792c62ae6f33d95ab1ff46d68995316324d8c5287b0d9ce142d1cf15158e61f594e930260abb8155467af8bc25779960615
+	sha512sums = SKIP
+	sha512sums = SKIP
+	sha512sums = SKIP
+
+pkgname = spotify
