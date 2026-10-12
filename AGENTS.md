@@ -1,0 +1,55 @@
+# AGENTS.md
+
+Personal Arch packages, each vendored from the AUR into its own directory and then reviewed and hardened. `README.md` has the procedures (checking, updating, building, adding); this file covers the rules behind them.
+
+## Layout
+
+- `<package>/`: `PKGBUILD`, `.SRCINFO`, helper files, and `keys/pgp/<FINGERPRINT>.asc` for upstream signing keys.
+- `lib/packages.bash`: per-package `upstream_<pkgname>` (prints the latest upstream `[epoch:]pkgver`) and `update_<pkgname> <version>` (edits `./PKGBUILD`).
+- `check-updates`, `update-package`: drivers around `lib/packages.bash`.
+- Build output and downloaded sources stay untracked: list each package's downloads in `.gitignore` under a comment naming the package.
+
+## Trust model
+
+The AUR maintainer's pinned checksums are not a source of truth; several packages are bumped by bots. Every package must verify its download against what upstream itself publishes:
+
+- When upstream signs its release metadata, verify it at build time: download the metadata and its detached signature as sources (`<name>` plus `<name>.sig`), set `validpgpkeys`, vendor the key under `keys/pgp/`, and check in `prepare()` that the payload matches the signed metadata, failing the build on a mismatch. See `claude-code` (signed manifest), `claude-desktop` and `spotify` (signed apt `Release` → `Packages` → `.deb`).
+- Before trusting a new signing key, confirm its fingerprint against upstream's documentation.
+- When upstream only publishes checksums (`docker-credential-secretservice-bin`), take the pinned values from that file.
+- Release metadata changes with every upstream release, so its checksum entries are `SKIP`; the signature covers it. Never run `updpkgsums` or `makepkg -g` on these packages: they replace the `SKIP` entries with fixed hashes. Use `./update-package`, which takes checksums from upstream's metadata.
+
+## Reviewing a package (when adding or rebasing on a newer AUR version)
+
+- Read every file, including the upstream payload's install scripts (e.g. a `.deb`'s `control.tar.*`): anything they set up that the PKGBUILD drops needs a decision.
+- Check runtime dependencies against the binaries (`readelf -d <file> | grep NEEDED`, then `pacman -Qo` on the libraries), not only the AUR's `depends`.
+- Use `${CARCH}` in `package()`, never `${arch}`, which always expands to the first architecture.
+- Version-name cached downloads (`LICENSE-${pkgver}`), so makepkg's source cache cannot reuse a stale file.
+- Question setuid files and other privileged bits; drop what Arch doesn't need, with a comment saying when it would be needed.
+- Check whether a newer upstream version exists and what it changes.
+- Download and unpack upstream payloads in a scratch directory, outside the repository.
+
+## Verifying a change
+
+```sh
+cd <package>
+makepkg --printsrcinfo > .SRCINFO   # after every PKGBUILD change
+makepkg -f                          # must pass signature and prepare() checks
+namcap PKGBUILD *.pkg.tar.zst
+```
+
+`namcap` warnings about prebuilt upstream binaries (no PIE or full RELRO, unstripped, files in `/opt`) can't be fixed by repackaging; note them, don't chase them. To test `update-package` changes, run it with `--no-build` in a scratch copy of the repository with packages set to an older version and zeroed checksums; the result should match the real files.
+
+`makepkg` checks signatures against the user's GPG keyring, so a new upstream key must be imported once (`gpg --import <package>/keys/pgp/<FINGERPRINT>.asc`).
+
+## Installing and system changes
+
+Installing (`makepkg -si`) and editing `/etc/pacman.conf` need sudo with a password, so the user runs those commands; give them the exact command. Packages also in a sync repository (`claude-code` and `claude-desktop` are in `cachyos`) rely on `IgnorePkg` in `/etc/pacman.conf`; the README lists the line.
+
+## Conventions
+
+- Keep each PKGBUILD's existing indentation (tabs in `claude-code`, 2 spaces in `claude-desktop`, 4 in the others) and its maintainer header unchanged.
+- Comment non-obvious PKGBUILD choices where they are made, saying why.
+- Adding a package also means: a row in the README table (AUR URL, the AUR commit and version it was based on), `upstream_`/`update_` functions in `lib/packages.bash`, the package in the README's `IgnorePkg` line, and `.gitignore` entries.
+- Commit messages:
+  - Adding: `Add <package> <version>`, then a body starting `Vendored from <AUR URL> at <commit> (<AUR version>), with these changes:` and a bullet list of every change from the AUR version, with the reason.
+  - Updating: `Update <package> to <version>-<pkgrel>`.
