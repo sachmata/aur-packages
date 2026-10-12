@@ -1,0 +1,23 @@
+pkgbase = docker-credential-secretservice-bin
+	pkgdesc = Store docker credentials using the D-Bus Secret Service
+	pkgver = 0.9.10
+	pkgrel = 1
+	url = https://github.com/docker/docker-credential-helpers
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	depends = glib2
+	depends = glibc
+	depends = libsecret
+	provides = docker-credential-secretservice
+	conflicts = docker-credential-secretservice
+	options = !debug
+	options = !strip
+	source = LICENSE-0.9.10::https://raw.githubusercontent.com/docker/docker-credential-helpers/v0.9.10/LICENSE
+	sha256sums = a6c2a5fdf40879f644bdb0da9042f245e7e263237d623264aafcf2470610ad8c
+	source_x86_64 = docker-credential-secretservice-bin-0.9.10-x86_64::https://github.com/docker/docker-credential-helpers/releases/download/v0.9.10/docker-credential-secretservice-v0.9.10.linux-amd64
+	sha256sums_x86_64 = 2669b03846eb0c865d6d3c8730243f30801b56469af62175bc3bda1fc803471a
+	source_aarch64 = docker-credential-secretservice-bin-0.9.10-aarch64::https://github.com/docker/docker-credential-helpers/releases/download/v0.9.10/docker-credential-secretservice-v0.9.10.linux-arm64
+	sha256sums_aarch64 = 7328a46ec8f470ac9a8f954abbbc634ed12ddec3ecdbeac97d47f134af47b76a
+
+pkgname = docker-credential-secretservice-bin

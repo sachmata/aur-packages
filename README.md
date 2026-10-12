@@ -7,6 +7,7 @@ Personal AUR package customizations, one directory per package.
 | Package | Vendored from | AUR commit | Version |
 | --- | --- | --- | --- |
 | [spotify](spotify/) | https://aur.archlinux.org/spotify.git | `0af779c` | 1:1.2.96.518-2 |
+| [docker-credential-secretservice-bin](docker-credential-secretservice-bin/) | https://aur.archlinux.org/docker-credential-secretservice-bin.git | `a8ab347` | 0.9.9-1 |
 
 ## Building
 

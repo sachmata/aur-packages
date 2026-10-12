@@ -18,3 +18,7 @@ spotify/*-Release.sig
 spotify/*-Packages
 spotify/*.sha256
 spotify/*.sha512
+
+# docker-credential-secretservice-bin: downloaded binary and license
+docker-credential-secretservice-bin/docker-credential-secretservice-bin-*
+docker-credential-secretservice-bin/LICENSE-*

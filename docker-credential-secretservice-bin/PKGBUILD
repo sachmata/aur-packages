@@ -1,0 +1,32 @@
+# Maintainer: Soma Zambelly <zambelly dot soma at gmail dot com>
+# Maintainer: ThePanz <thepanz@gmail.com>
+
+pkgname=docker-credential-secretservice-bin
+pkgver=0.9.10
+pkgrel=1
+pkgdesc="Store docker credentials using the D-Bus Secret Service"
+arch=('x86_64' 'aarch64')
+url="https://github.com/docker/docker-credential-helpers"
+license=('MIT')
+depends=('glib2' 'glibc' 'libsecret')
+# Keep the binary byte-identical to the release so it can be checked against
+# upstream's checksums.txt
+options=('!debug' '!strip')
+provides=("${pkgname%-bin}")
+conflicts=("${pkgname%-bin}")
+
+source=("LICENSE-${pkgver}::https://raw.githubusercontent.com/docker/docker-credential-helpers/v${pkgver}/LICENSE")
+source_x86_64=("${pkgname}-${pkgver}-x86_64::${url}/releases/download/v${pkgver}/docker-credential-secretservice-v${pkgver}.linux-amd64")
+source_aarch64=("${pkgname}-${pkgver}-aarch64::${url}/releases/download/v${pkgver}/docker-credential-secretservice-v${pkgver}.linux-arm64")
+
+# Binary checksums match upstream's checksums.txt release asset
+sha256sums=('a6c2a5fdf40879f644bdb0da9042f245e7e263237d623264aafcf2470610ad8c')
+sha256sums_x86_64=('2669b03846eb0c865d6d3c8730243f30801b56469af62175bc3bda1fc803471a')
+sha256sums_aarch64=('7328a46ec8f470ac9a8f954abbbc634ed12ddec3ecdbeac97d47f134af47b76a')
+
+package() {
+    install -D -m 0755 "${srcdir}/${pkgname}-${pkgver}-${CARCH}" "${pkgdir}/usr/bin/docker-credential-secretservice"
+    install -D -m 0644 "${srcdir}/LICENSE-${pkgver}" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
+
+# vim:set ts=4 sw=4 et:
