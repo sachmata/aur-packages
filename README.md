@@ -27,6 +27,15 @@ cd <package>
 makepkg -si
 ```
 
+Some of these packages also exist in a sync repository (e.g. `claude-code` and `claude-desktop` in `cachyos`), and `pacman -Syu` would replace the local build with the repository one. List every package from this repository in `IgnorePkg` in `/etc/pacman.conf`:
+
+```ini
+[options]
+IgnorePkg   = spotify docker-credential-secretservice-bin claude-code claude-desktop
+```
+
+`pacman -Syu` then reports `warning: <package>: ignoring package upgrade` instead of replacing it, and `makepkg -si` asks `Install anyway?` before installing an ignored package; answer yes. Add new packages to this line when adding them below.
+
 ## Adding a package
 
 Copy the package files from the AUR, without its git history:
@@ -38,4 +47,4 @@ rm -rf /tmp/<package>/.git
 cp -r /tmp/<package> <package>
 ```
 
-Add a row to the table above with the AUR source, the commit and the version it was based on.
+Add a row to the table above with the AUR source, the commit and the version it was based on, an `upstream_<pkgname>` function to `check-updates`, and the package to `IgnorePkg`.
