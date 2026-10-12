@@ -1,0 +1,84 @@
+# Maintainer: Christopher Cooper <christopher@cg505.com>
+# Maintainer: Jérôme Poulin <jeromepoulin@gmail.com>
+# Maintainer: Fabio Fontana (fabifont) <me@fabifont.dev>
+# Automation repository: https://github.com/fabifont/claude-code-aur
+
+pkgname=claude-code
+pkgver=2.1.296
+pkgrel=1
+pkgdesc="An agentic coding tool that lives in your terminal"
+arch=('x86_64' 'aarch64')
+url="https://github.com/anthropics/claude-code"
+license=('LicenseRef-claude-code')
+depends=('bash' 'glibc')
+makedepends=('jq')
+# Binary is a self-contained Bun executable with embedded JS/resources - stripping breaks it
+options=('!strip')
+
+optdepends=(
+	'git: allow Claude to use git'
+	'github-cli: interact with GitHub'
+	'glab: interact with GitLab'
+	'ripgrep: enhanced file search'
+	'tmux: agent team split panes'
+	'bubblewrap: sandboxing'
+	'socat: sandboxing'
+)
+
+_releases=https://downloads.claude.ai/claude-code-releases
+source=("cc-legal-${pkgver}.md::https://code.claude.com/docs/en/legal-and-compliance.md"
+	"${pkgname}-${pkgver}-manifest.json::${_releases}/${pkgver}/manifest.json"
+	"${pkgname}-${pkgver}-manifest.json.sig::${_releases}/${pkgver}/manifest.json.sig")
+source_x86_64=("claude-${pkgver}-x86_64::${_releases}/${pkgver}/linux-x64/claude")
+source_aarch64=("claude-${pkgver}-aarch64::${_releases}/${pkgver}/linux-arm64/claude")
+
+# The legal page is not versioned; the manifest is covered by its signature
+sha256sums=('SKIP'
+	'SKIP'
+	'SKIP')
+sha256sums_x86_64=('24972e3bc859fab2b46ed4c1e51f7d6130f06d3bd550811a114640de3370d0de')
+sha256sums_aarch64=('f1f6e96e0d8342b9dbf41d7e88255397a6a52ce3d8736ad6a4c6b59c9b62fefa')
+validpgpkeys=('31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE') # Anthropic Claude Code Release Signing <security@anthropic.com>
+
+prepare() {
+	# The pinned binary checksums are bumped by automation; check them against
+	# the signed release manifest
+	local _platform _manifest="${srcdir}/${pkgname}-${pkgver}-manifest.json"
+	case "${CARCH}" in
+		x86_64) _platform=linux-x64 ;;
+		aarch64) _platform=linux-arm64 ;;
+	esac
+
+	local _version _expected _actual
+	_version=$(jq -er '.version' "${_manifest}")
+	_expected=$(jq -er --arg p "${_platform}" '.platforms[$p].checksum' "${_manifest}")
+	_actual=$(sha256sum "${srcdir}/claude-${pkgver}-${CARCH}" | cut -d' ' -f1)
+
+	if [[ "${_version}" != "${pkgver}" ]]; then
+		error "Signed manifest is for version ${_version}, expected ${pkgver}"
+		return 1
+	fi
+	if [[ "${_actual}" != "${_expected}" ]]; then
+		error "claude binary checksum ${_actual} does not match signed manifest ${_expected}"
+		return 1
+	fi
+}
+
+package() {
+	install -Dm755 "${srcdir}/claude-${pkgver}-${CARCH}" "${pkgdir}/opt/claude-code/bin/claude"
+
+	# Create wrapper script to disable upstream update paths, and to suppress the
+	# native-install health check. Claude Code expects the native installer layout
+	# (~/.local/bin/claude); since we install to /opt + /usr/bin it would otherwise
+	# warn on every startup: "claude command at ~/.local/bin/claude missing or broken".
+	install -dm755 "${pkgdir}/usr/bin"
+	cat > "${pkgdir}/usr/bin/claude" << 'EOF'
+#!/bin/sh
+export DISABLE_UPDATES=1
+export DISABLE_INSTALLATION_CHECKS=1
+exec /opt/claude-code/bin/claude "$@"
+EOF
+	chmod 755 "${pkgdir}/usr/bin/claude"
+
+	install -Dm644 "${srcdir}/cc-legal-${pkgver}.md" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
