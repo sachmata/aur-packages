@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Update a package to a new upstream version.
+#
+# Usage: ./update-package [--no-build] <package> [version]
+#
+# Sets pkgver (resetting pkgrel to 1), pins the checksums from upstream's
+# published metadata, regenerates .SRCINFO and builds the package, which
+# verifies upstream's signatures. Without a version, updates to the latest
+# upstream release. PKGBUILD and .SRCINFO are restored if any step before
+# the build fails; a failed build leaves the edits in place for inspection.
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+# shellcheck source=lib/packages.bash
+source lib/packages.bash
+
+usage() {
+  echo "Usage: $0 [--no-build] <package> [version]" >&2
+  exit 2
+}
+
+build=1
+if [[ ${1:-} == --no-build ]]; then
+  build=0
+  shift
+fi
+(($# == 1 || $# == 2)) || usage
+pkg=${1%/}
+
+[[ -f $pkg/PKGBUILD ]] || { echo "error: no such package: ${pkg}" >&2; exit 2; }
+declare -F "update_$pkg" >/dev/null || { echo "error: no update_${pkg} function in lib/packages.bash" >&2; exit 2; }
+
+current=$(local_version "$pkg")
+target=${2:-$("upstream_$pkg")}
+[[ -n $target ]] || { echo "error: could not determine the upstream version" >&2; exit 1; }
+
+case $(vercmp "$target" "$current") in
+  0) echo "${pkg} is already at ${current}"; exit 0 ;;
+  -1) echo "error: ${target} is older than the current ${current}" >&2; exit 1 ;;
+esac
+
+echo "==> Updating ${pkg}: ${current} -> ${target}"
+cd "$pkg"
+
+backup=$(mktemp -d)
+cp PKGBUILD .SRCINFO "$backup"
+restore() {
+  cp "$backup/PKGBUILD" "$backup/.SRCINFO" .
+  rm -rf "$backup"
+  echo "error: update failed, PKGBUILD and .SRCINFO restored" >&2
+}
+trap restore ERR
+
+"update_$pkg" "$target"
+set_var pkgrel 1
+makepkg --printsrcinfo > .SRCINFO
+
+trap - ERR
+rm -rf "$backup"
+
+echo "==> Changes:"
+git --no-pager diff --stat -- .
+git --no-pager diff -U0 -- PKGBUILD
+
+if ((build)); then
+  echo "==> Building (verifies upstream signatures and checksums)"
+  makepkg -f --noconfirm
+fi
+
+cat <<EOF
+==> Done. Next:
+    cd ${pkg} && makepkg -si
+    git commit -am 'Update ${pkg} to ${target}-1' && git push
+EOF

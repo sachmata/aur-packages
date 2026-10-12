@@ -7,38 +7,8 @@ set -uo pipefail
 
 cd "$(dirname "$0")"
 
-fetch() { curl -fsSL --retry 2 --max-time 30 "$@"; }
-
-# Highest Version: in a Debian Packages index
-apt_latest() { fetch "$1" | awk '/^Version:/ { print $2 }' | sort -V | tail -n1; }
-
-# Each upstream_<pkgname> prints the latest upstream version as [epoch:]pkgver
-upstream_claude-code() {
-  fetch https://downloads.claude.ai/claude-code-releases/latest
-}
-
-upstream_claude-desktop() {
-  apt_latest https://downloads.claude.ai/claude-desktop/apt/stable/dists/stable/main/binary-amd64/Packages
-}
-
-upstream_docker-credential-secretservice-bin() {
-  fetch https://api.github.com/repos/docker/docker-credential-helpers/releases/latest |
-    jq -er '.tag_name | ltrimstr("v")'
-}
-
-upstream_spotify() {
-  # Debian version 1:1.3.4.258.gc60b10b0946a -> 1:1.3.4.258 (the commit is _commit)
-  apt_latest https://repository.spotify.com/dists/testing/non-free/binary-amd64/Packages |
-    sed -E 's/\.g[0-9a-f]+$//'
-}
-
-local_version() {
-  awk -F' = ' '
-    $1 ~ /^\tepoch$/  { epoch = $2 }
-    $1 ~ /^\tpkgver$/ { ver = $2 }
-    END { print (epoch ? epoch ":" : "") ver }
-  ' "$1/.SRCINFO"
-}
+# shellcheck source=lib/packages.bash
+source lib/packages.bash
 
 if (($#)); then
   packages=("$@")

@@ -18,7 +18,23 @@ Personal AUR package customizations, one directory per package.
 ./check-updates <package>  # selected packages
 ```
 
-Compares each package's `pkgver` with the latest upstream release. It exits 1 when an update is available and 2 when an upstream check failed. A new package needs an `upstream_<pkgname>` function in the script.
+Compares each package's `pkgver` with the latest upstream release. It exits 1 when an update is available and 2 when an upstream check failed.
+
+## Updating a package
+
+```sh
+./update-package <package>             # to the latest upstream release
+./update-package <package> <version>   # to a specific version
+./update-package --no-build <package>  # edit only, skip the build
+cd <package> && makepkg -si
+git commit -am 'Update <package> to <version>-1' && git push
+```
+
+`update-package` sets `pkgver`, resets `pkgrel` to 1, pins the new checksums from upstream's published metadata (Anthropic's signed release manifest and apt index, Spotify's signed apt index, the GitHub release's `checksums.txt`), regenerates `.SRCINFO` and builds the package, which verifies upstream's signatures. If an edit fails, `PKGBUILD` and `.SRCINFO` are restored.
+
+Don't use `updpkgsums` on packages with `SKIP` entries for repository metadata: it replaces them with fixed hashes that break the build once upstream publishes a new release.
+
+The per-package logic lives in `lib/packages.bash`: an `upstream_<pkgname>` function that prints the latest version, used by both scripts, and an `update_<pkgname>` function that updates the `PKGBUILD`.
 
 ## Building
 
@@ -47,4 +63,4 @@ rm -rf /tmp/<package>/.git
 cp -r /tmp/<package> <package>
 ```
 
-Add a row to the table above with the AUR source, the commit and the version it was based on, an `upstream_<pkgname>` function to `check-updates`, and the package to `IgnorePkg`.
+Add a row to the table above with the AUR source, the commit and the version it was based on, `upstream_<pkgname>` and `update_<pkgname>` functions to `lib/packages.bash`, and the package to `IgnorePkg`.
