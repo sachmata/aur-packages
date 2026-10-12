@@ -11,6 +11,15 @@ Personal AUR package customizations, one directory per package.
 | [claude-code](claude-code/) | https://aur.archlinux.org/claude-code.git | `9a43483` | 2.1.296-1 |
 | [claude-desktop](claude-desktop/) | https://aur.archlinux.org/claude-desktop.git | `20669f6` | 2.31226.1-1 |
 
+## Checking for updates
+
+```sh
+./check-updates            # all packages
+./check-updates <package>  # selected packages
+```
+
+Compares each package's `pkgver` with the latest upstream release. It exits 1 when an update is available and 2 when an upstream check failed. A new package needs an `upstream_<pkgname>` function in the script.
+
 ## Building
 
 ```sh
