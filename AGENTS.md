@@ -43,13 +43,13 @@ namcap PKGBUILD *.pkg.tar.zst
 
 ## Installing and system changes
 
-Installing (`makepkg -si`) and editing `/etc/pacman.conf` need sudo with a password, so the user runs those commands; give them the exact command. Packages also in a sync repository (`claude-code` and `claude-desktop` are in `cachyos`) rely on `IgnorePkg` in `/etc/pacman.conf`; the README lists the line.
+Installing (`paru -Syu`, `paru -S`) and editing `/etc/pacman.conf` need sudo with a password, so the user runs those commands; give them the exact command. Packages are installed through paru, which builds them into the local pacman repository `sachmata-local` (listed above `cachyos`, which also has `claude-code` and `claude-desktop`) and takes updates from this git repository's pushed `.SRCINFO`; the README has the setup. Don't install with `makepkg -si`, which bypasses the local repository, and don't suggest `IgnorePkg`, which would block paru's upgrades.
 
 ## Conventions
 
 - Keep each PKGBUILD's existing indentation (tabs in `claude-code`, 2 spaces in `claude-desktop`, 4 in the others) and its maintainer header unchanged.
 - Comment non-obvious PKGBUILD choices where they are made, saying why.
-- Adding a package also means: a row in the README table (AUR URL, the AUR commit and version it was based on), `upstream_`/`update_` functions in `lib/packages.bash`, the package in the README's `IgnorePkg` line, and `.gitignore` entries.
+- Adding a package also means: a row in the README table (AUR URL, the AUR commit and version it was based on), `upstream_`/`update_` functions in `lib/packages.bash`, and `.gitignore` entries.
 - Commit messages:
   - Adding: `Add <package> <version>`, then a body starting `Vendored from <AUR URL> at <commit> (<AUR version>), with these changes:` and a bullet list of every change from the AUR version, with the reason.
   - Updating: `Update <package> to <version>-<pkgrel>`.
