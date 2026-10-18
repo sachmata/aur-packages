@@ -1,10 +1,10 @@
 # Maintainer: Martin Dimitrov <martin.dimitrov@chaos.com>
 
 pkgname=gpvpn
-pkgver=0.3.2
+pkgver=0.4.0
 pkgrel=1
 # Commit the v${pkgver} tag points to; prepare() checks the tag still matches
-_commit=7b089a6a571c5d2985756c57df9df360d88d39cd
+_commit=d5ed036922e86e7085e61211be80dea739e5b142
 pkgdesc="GlobalProtect VPN via stock openconnect with default-browser SAML login"
 arch=('x86_64')
 url="https://github.com/sachmata/gpvpn"
@@ -12,7 +12,8 @@ license=('MIT')
 depends=('bash' 'coreutils' 'curl' 'glibc' 'iproute2' 'libxml2' 'openconnect'
          'polkit' 'sed' 'systemd' 'util-linux' 'xdg-utils')
 makedepends=('git' 'odin')
-optdepends=('libnotify: desktop notification when a login callback fails')
+optdepends=('gnome-shell: Quick Settings toggle (extension gpvpn@sachmata.github.io)'
+            'libnotify: desktop notification when a login callback fails')
 install=gpvpn.install
 # Private repository, so ssh with the building user's key. Pinned by commit:
 # the tag is unsigned and could be moved.
