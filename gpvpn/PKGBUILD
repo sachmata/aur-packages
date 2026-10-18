@@ -1,10 +1,10 @@
 # Maintainer: Martin Dimitrov <martin.dimitrov@chaos.com>
 
 pkgname=gpvpn
-pkgver=0.5.0
+pkgver=0.6.0
 pkgrel=1
 # Commit the v${pkgver} tag points to; prepare() checks the tag still matches
-_commit=99090f0561b4d600c7c9deadf5e7fd9940cfadab
+_commit=64d998d2a6dc065b53d60777d0a4285b50aacf40
 pkgdesc="GlobalProtect VPN via stock openconnect with default-browser SAML login"
 arch=('x86_64')
 url="https://github.com/sachmata/gpvpn"
