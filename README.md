@@ -10,7 +10,7 @@ Personal AUR package customizations, one directory per package.
 | [docker-credential-secretservice-bin](docker-credential-secretservice-bin/) | https://aur.archlinux.org/docker-credential-secretservice-bin.git | `a8ab347` | 0.9.9-1 |
 | [claude-code](claude-code/) | https://aur.archlinux.org/claude-code.git | `9a43483` | 2.1.296-1 |
 | [claude-desktop](claude-desktop/) | https://aur.archlinux.org/claude-desktop.git | `20669f6` | 2.31226.1-1 |
-| [gpvpn](gpvpn/) | own: https://github.com/sachmata/gpvpn (not on the AUR) | — | 0.6.0-1 |
+| [gpvpn](gpvpn/) | own: https://github.com/sachmata/gpvpn (not on the AUR) | — | 0.7.0-1 |
 
 ## Checking for updates
 
@@ -98,5 +98,3 @@ cp -r /tmp/<package> <package>
 Add a row to the table above with the AUR source, the commit and the version it was based on, and `upstream_<pkgname>` and `update_<pkgname>` functions to `lib/packages.bash`. Once pushed, install it with `paru -Sy sachmata/<package>`.
 
 For a package of your own project, follow "Own packages" in `AGENTS.md` instead of copying from the AUR.
-
-`gpvpn` needs `odin` from `extra` to build: `makepkg -f` and `./update-package gpvpn` stop with "Missing dependencies: odin" until it is installed (paru installs it as a build dependency).
