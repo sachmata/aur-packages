@@ -78,7 +78,22 @@ Some of these packages also exist in a sync repository (e.g. `claude-code` and `
 
    paru needs a URL with a scheme; `git@github.com:...` fails with `relative URL without a base`.
 
-4. Install packages with `paru -Sy sachmata/<package>`; `paru -Syu` then upgrades them from this repository's pushed `.SRCINFO`, ahead of the AUR.
+4. Download this repository's PKGBUILDs, and import the upstream signing keys (makepkg checks signatures against your keyring):
+
+   ```sh
+   paru -Sy --pkgbuilds
+   gpg --import ~/.cache/paru/clone/repo/sachmata/*/keys/pgp/*.asc
+   ```
+
+   `--pkgbuilds` limits the refresh to PKGBUILD repositories. A plain `-Sy` would also sync `sachmata-local`, whose database doesn't exist until paru adds the first package, and fail with `failed retrieving file 'sachmata-local.db'`.
+
+5. Install the first package without `-y`, so paru builds it and creates the database:
+
+   ```sh
+   paru -S sachmata/<package>
+   ```
+
+   From then on, install with `paru -Sy sachmata/<package>`; `paru -Syu` upgrades them from this repository's pushed `.SRCINFO`, ahead of the AUR.
 
 `paru -Qu` doesn't give the PKGBUILD repository priority: it reports AUR versions of these packages (e.g. a newer AUR `pkgrel`) and misses this repository's updates. Check with `paru -Syu`, which lists the upgrades before asking.
 
