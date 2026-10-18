@@ -155,14 +155,23 @@ update_spotify() {
 _gpvpn_repo=git@github.com:sachmata/gpvpn.git
 
 upstream_gpvpn() {
-  git ls-remote --tags --refs "$_gpvpn_repo" 'v*' | sed -E 's|.*refs/tags/v||' | sort -V | tail -n1
+  # Release tags only (v1.2.3): not other v-prefixed names or pre-releases,
+  # which sort -V would rank above the release and pacman can't take as pkgver
+  git ls-remote --tags --refs "$_gpvpn_repo" |
+    sed -nE 's|.*\trefs/tags/v([0-9]+(\.[0-9]+)*)$|\1|p' | sort -V | tail -n1
 }
 
 update_gpvpn() {
-  local ver=$1 commit
-  # Tags are unsigned, so pin the commit the tag points to (peeled, as tags
-  # are annotated); prepare() checks the tag still matches at build time
-  commit=$(git ls-remote "$_gpvpn_repo" "refs/tags/v${ver}^{}" | cut -f1)
+  local ver=$1 refs commit
+  # Tags are unsigned, so pin the commit the tag points to; prepare() checks
+  # the tag still matches at build time. An annotated tag's commit is its
+  # peeled ^{} line; a lightweight tag has only the plain line.
+  refs=$(git ls-remote "$_gpvpn_repo" "refs/tags/v${ver}" "refs/tags/v${ver}^{}") || return
+  commit=$(awk -v t="refs/tags/v${ver}" '
+    $2 == t "^{}" { peeled = $1 }
+    $2 == t       { plain = $1 }
+    END           { print (peeled ? peeled : plain) }
+  ' <<<"$refs")
   [[ $commit =~ ^[0-9a-f]{40}$ ]] || die "tag v${ver} not found in ${_gpvpn_repo}" || return
 
   set_var pkgver "$ver" &&

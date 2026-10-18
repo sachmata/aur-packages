@@ -2,6 +2,7 @@ post_install() {
     cat <<'EOF'
 ==> Finish gpvpn setup (once per user):
     sudo gpvpn setup-operator --portal <portal-host> [user]
+  then as that user (not with sudo):
     xdg-mime default gpvpn-callback.desktop x-scheme-handler/globalprotectcallback
     gpvpn doctor
 EOF

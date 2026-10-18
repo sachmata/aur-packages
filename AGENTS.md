@@ -18,6 +18,10 @@ The AUR maintainer's pinned checksums are not a source of truth; several package
 - When upstream only publishes checksums (`docker-credential-secretservice-bin`), take the pinned values from that file.
 - Release metadata changes with every upstream release, so its checksum entries are `SKIP`; the signature covers it. Never run `updpkgsums` or `makepkg -g` on these packages: they replace the `SKIP` entries with fixed hashes. Use `./update-package`, which takes checksums from upstream's metadata.
 
+### Own packages (not from the AUR)
+
+Packages of the owner's own projects (`gpvpn`) build from the project's git repository over ssh (it may be private). Release tags are unsigned, so pin the tag's commit in `_commit`, use `#commit=${_commit}`, and in `prepare()` force-fetch the tag from `origin` (makepkg's plain fetch keeps a stale tag in a reused `src/`) and fail if it no longer resolves to `_commit`. `update_<pkgname>` resolves the commit with `git ls-remote` (the peeled `^{}` line for annotated tags), and `upstream_<pkgname>` only accepts `v<digits>[.<digits>]...` tags. Run `make clean` in `build()`: `src/` is reused across builds. The README row says `own: <url>` with `—` as the AUR commit; the commit message body starts `Own package, not vendored from the AUR: built from <url> at tag v<version>.` in place of the `Vendored from` line.
+
 ## Reviewing a package (when adding or rebasing on a newer AUR version)
 
 - Read every file, including the upstream payload's install scripts (e.g. a `.deb`'s `control.tar.*`): anything they set up that the PKGBUILD drops needs a decision.

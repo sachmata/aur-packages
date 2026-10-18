@@ -2,15 +2,15 @@
 
 pkgname=gpvpn
 pkgver=0.1.1
-pkgrel=1
+pkgrel=2
 # Commit the v${pkgver} tag points to; prepare() checks the tag still matches
 _commit=4bb88b862bc60e373ceac6b10ba2e53635e5010a
 pkgdesc="GlobalProtect VPN via stock openconnect with default-browser SAML login"
 arch=('x86_64')
 url="https://github.com/sachmata/gpvpn"
 license=('MIT')
-depends=('bash' 'coreutils' 'curl' 'glibc' 'libxml2' 'openconnect' 'polkit'
-         'systemd' 'util-linux' 'xdg-utils')
+depends=('bash' 'coreutils' 'curl' 'glibc' 'iproute2' 'libxml2' 'openconnect'
+         'polkit' 'sed' 'systemd' 'util-linux' 'xdg-utils')
 makedepends=('git' 'odin')
 optdepends=('libnotify: desktop notification when a login callback fails')
 install=gpvpn.install
@@ -22,7 +22,10 @@ sha256sums=('SKIP')
 prepare() {
     cd gpvpn
     local tagged
-    tagged=$(git rev-parse "v${pkgver}^{commit}")
+    # makepkg's plain `git fetch` keeps a stale tag in a reused src/; force it
+    # from the local mirror (origin), which makepkg has just updated
+    git fetch -q --force origin "+refs/tags/v${pkgver}:refs/tags/v${pkgver}"
+    tagged=$(git rev-parse --verify "refs/tags/v${pkgver}^{commit}")
     if [[ $tagged != "$_commit" ]]; then
         echo "tag v${pkgver} is ${tagged}, expected ${_commit}" >&2
         return 1
