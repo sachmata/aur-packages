@@ -1,6 +1,6 @@
 pkgbase = gpvpn
 	pkgdesc = GlobalProtect VPN via stock openconnect with default-browser SAML login
-	pkgver = 0.2.1
+	pkgver = 0.3.0
 	pkgrel = 1
 	url = https://github.com/sachmata/gpvpn
 	install = gpvpn.install
@@ -21,7 +21,7 @@ pkgbase = gpvpn
 	depends = util-linux
 	depends = xdg-utils
 	optdepends = libnotify: desktop notification when a login callback fails
-	source = git+ssh://git@github.com/sachmata/gpvpn.git#commit=5b46e93e4e7815d9735adb7e449ea9d3f39222cf
+	source = git+ssh://git@github.com/sachmata/gpvpn.git#commit=1ce296a436b34b4dd4cf57fc17bdf3950facefaf
 	sha256sums = SKIP
 
 pkgname = gpvpn

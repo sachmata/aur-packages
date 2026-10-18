@@ -1,7 +1,7 @@
 post_install() {
     cat <<'EOF'
 ==> Finish gpvpn setup (once per user):
-    sudo gpvpn setup-operator --portal <portal-host> [user]
+    sudo gpvpn setup-operator --server <gateway-host> [user]
   then as that user (not with sudo):
     xdg-mime default gpvpn-callback.desktop x-scheme-handler/globalprotectcallback
     gpvpn doctor
@@ -10,7 +10,7 @@ EOF
 
 post_remove() {
     cat <<'EOF'
-==> Left in place: /etc/gpvpn.conf (portal list) and the gpvpn group, which
+==> Left in place: /etc/gpvpn.conf (gateway list) and the gpvpn group, which
     grants nothing now that the polkit rule is gone with the package.
 EOF
 }
