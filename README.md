@@ -10,7 +10,7 @@ Personal AUR package customizations, one directory per package.
 | [docker-credential-secretservice-bin](docker-credential-secretservice-bin/) | https://aur.archlinux.org/docker-credential-secretservice-bin.git | `a8ab347` | 0.9.9-1 |
 | [claude-code](claude-code/) | https://aur.archlinux.org/claude-code.git | `9a43483` | 2.1.296-1 |
 | [claude-desktop](claude-desktop/) | https://aur.archlinux.org/claude-desktop.git | `20669f6` | 2.31226.1-1 |
-| [gpvpn](gpvpn/) | own: https://github.com/sachmata/gpvpn (not on the AUR) | — | 0.4.0-1 |
+| [gpvpn](gpvpn/) | own: https://github.com/sachmata/gpvpn (not on the AUR) | — | 0.4.1-1 |
 
 ## Checking for updates
 

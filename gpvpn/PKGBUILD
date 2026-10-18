@@ -1,10 +1,10 @@
 # Maintainer: Martin Dimitrov <martin.dimitrov@chaos.com>
 
 pkgname=gpvpn
-pkgver=0.4.0
+pkgver=0.4.1
 pkgrel=1
 # Commit the v${pkgver} tag points to; prepare() checks the tag still matches
-_commit=d5ed036922e86e7085e61211be80dea739e5b142
+_commit=f11a5ada78aab6ef13927cdf2fa3a2591b95cf7a
 pkgdesc="GlobalProtect VPN via stock openconnect with default-browser SAML login"
 arch=('x86_64')
 url="https://github.com/sachmata/gpvpn"
@@ -12,6 +12,7 @@ license=('MIT')
 depends=('bash' 'coreutils' 'curl' 'glibc' 'iproute2' 'libxml2' 'openconnect'
          'polkit' 'sed' 'systemd' 'util-linux' 'xdg-utils')
 makedepends=('git' 'odin')
+checkdepends=('gjs')  # unitWatcher test; skips itself without a system bus
 optdepends=('gnome-shell: Quick Settings toggle (extension gpvpn@sachmata.github.io)'
             'libnotify: desktop notification when a login callback fails')
 install=gpvpn.install
