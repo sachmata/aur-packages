@@ -148,3 +148,23 @@ update_spotify() {
     set_var _commit "${debver##*.}" &&
     set_sum sha512sums "$sum"
 }
+
+# --- gpvpn --------------------------------------------------------------------
+
+# Own private repository (https://github.com/sachmata/gpvpn), read over ssh
+_gpvpn_repo=git@github.com:sachmata/gpvpn.git
+
+upstream_gpvpn() {
+  git ls-remote --tags --refs "$_gpvpn_repo" 'v*' | sed -E 's|.*refs/tags/v||' | sort -V | tail -n1
+}
+
+update_gpvpn() {
+  local ver=$1 commit
+  # Tags are unsigned, so pin the commit the tag points to (peeled, as tags
+  # are annotated); prepare() checks the tag still matches at build time
+  commit=$(git ls-remote "$_gpvpn_repo" "refs/tags/v${ver}^{}" | cut -f1)
+  [[ $commit =~ ^[0-9a-f]{40}$ ]] || die "tag v${ver} not found in ${_gpvpn_repo}" || return
+
+  set_var pkgver "$ver" &&
+    set_var _commit "$commit"
+}

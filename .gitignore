@@ -32,3 +32,6 @@ claude-code/cc-legal-*
 claude-desktop/*-Release
 claude-desktop/*-Release.sig
 claude-desktop/*-Packages
+
+# gpvpn: git mirror of the source repository
+gpvpn/gpvpn/
