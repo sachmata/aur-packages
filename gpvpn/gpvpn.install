@@ -10,7 +10,7 @@ EOF
 
 post_remove() {
     cat <<'EOF'
-==> setup-operator's files are left in place; remove them if unused:
-    /etc/gpvpn.conf /etc/polkit-1/rules.d/50-gpvpn-*.rules
+==> Left in place: /etc/gpvpn.conf (portal list) and the gpvpn group, which
+    grants nothing now that the polkit rule is gone with the package.
 EOF
 }
