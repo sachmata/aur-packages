@@ -1,6 +1,6 @@
 pkgbase = docker-credential-secretservice-bin
 	pkgdesc = Store docker credentials using the D-Bus Secret Service
-	pkgver = 0.9.10
+	pkgver = 0.9.12
 	pkgrel = 1
 	url = https://github.com/docker/docker-credential-helpers
 	arch = x86_64
@@ -13,11 +13,11 @@ pkgbase = docker-credential-secretservice-bin
 	conflicts = docker-credential-secretservice
 	options = !debug
 	options = !strip
-	source = LICENSE-0.9.10::https://raw.githubusercontent.com/docker/docker-credential-helpers/v0.9.10/LICENSE
+	source = LICENSE-0.9.12::https://raw.githubusercontent.com/docker/docker-credential-helpers/v0.9.12/LICENSE
 	sha256sums = a6c2a5fdf40879f644bdb0da9042f245e7e263237d623264aafcf2470610ad8c
-	source_x86_64 = docker-credential-secretservice-bin-0.9.10-x86_64::https://github.com/docker/docker-credential-helpers/releases/download/v0.9.10/docker-credential-secretservice-v0.9.10.linux-amd64
-	sha256sums_x86_64 = 2669b03846eb0c865d6d3c8730243f30801b56469af62175bc3bda1fc803471a
-	source_aarch64 = docker-credential-secretservice-bin-0.9.10-aarch64::https://github.com/docker/docker-credential-helpers/releases/download/v0.9.10/docker-credential-secretservice-v0.9.10.linux-arm64
-	sha256sums_aarch64 = 7328a46ec8f470ac9a8f954abbbc634ed12ddec3ecdbeac97d47f134af47b76a
+	source_x86_64 = docker-credential-secretservice-bin-0.9.12-x86_64::https://github.com/docker/docker-credential-helpers/releases/download/v0.9.12/docker-credential-secretservice-v0.9.12.linux-amd64
+	sha256sums_x86_64 = a7031335bebc9a8573fbacae6e56fe7848a360d6746c62a7680849012dac0068
+	source_aarch64 = docker-credential-secretservice-bin-0.9.12-aarch64::https://github.com/docker/docker-credential-helpers/releases/download/v0.9.12/docker-credential-secretservice-v0.9.12.linux-arm64
+	sha256sums_aarch64 = 8075d247efcb133805d63bebc797833e108c5dca36351d501f87c031c683823f
 
 pkgname = docker-credential-secretservice-bin
