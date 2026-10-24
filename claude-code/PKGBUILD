@@ -4,7 +4,7 @@
 # Automation repository: https://github.com/fabifont/claude-code-aur
 
 pkgname=claude-code
-pkgver=2.1.308
+pkgver=2.1.310
 pkgrel=1
 pkgdesc="An agentic coding tool that lives in your terminal"
 arch=('x86_64' 'aarch64')
@@ -36,8 +36,8 @@ source_aarch64=("claude-${pkgver}-aarch64::${_releases}/${pkgver}/linux-arm64/cl
 sha256sums=('SKIP'
 	'SKIP'
 	'SKIP')
-sha256sums_x86_64=('356733f185fa988e6bf3aa9a555269fdd167982a2e2a80d3c8a78037bb92ad58')
-sha256sums_aarch64=('fdd22e6cbb734d580f5664c48df4294eeec850218ff07f186f9af30426396ee1')
+sha256sums_x86_64=('b73676430af12f97316a798b8371f81d640f90a58bdcb8f3ce56a835bb47df56')
+sha256sums_aarch64=('9c64d9a7442436b65fcd7cc02c1aa0051bb5a7041e7788576ed3b5f29c447d54')
 validpgpkeys=('31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE') # Anthropic Claude Code Release Signing <security@anthropic.com>
 
 prepare() {
