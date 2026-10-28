@@ -31,7 +31,7 @@ git commit -am 'Update <package> to <version>-1' && git push
 paru -Syu
 ```
 
-`paru -Syu` pulls this repository, shows the diff for review, builds the new version into the local repository and installs it (see [Installing with paru](#installing-with-paru)).
+`paru -Syu` pulls this repository, builds the new version into the local repository and installs it (see [Installing with paru](#installing-with-paru)).
 
 `update-package` sets `pkgver`, resets `pkgrel` to 1, pins the new checksums from upstream's published metadata (Anthropic's signed release manifest and apt index, Spotify's signed apt index, the GitHub release's `checksums.txt`), regenerates `.SRCINFO` and builds the package, which verifies upstream's signatures. If an edit fails, `PKGBUILD` and `.SRCINFO` are restored.
 
@@ -74,9 +74,12 @@ Some of these packages also exist in a sync repository (e.g. `claude-code` and `
 
    [sachmata]
    Url = ssh://git@github.com/sachmata/aur-packages.git
+   SkipReview
    ```
 
    paru needs a URL with a scheme; `git@github.com:...` fails with `relative URL without a base`.
+
+   `SkipReview` turns off paru's diff review for this repository: its changes are reviewed when they are committed here. Paru's review of PKGBUILD repositories also marks the pre-merge commit as seen, so every diff would be shown again on the next upgrade.
 
 4. Download this repository's PKGBUILDs, and import the upstream signing keys (makepkg checks signatures against your keyring):
 
