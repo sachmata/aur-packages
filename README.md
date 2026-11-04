@@ -52,6 +52,11 @@ A test build only; install through paru (below), so the package lands in the loc
 
 Some of these packages also exist in a sync repository (e.g. `claude-code` and `claude-desktop` in `cachyos`), and `pacman -Syu` would replace a local build with the repository one. To prevent that, paru builds this repository's packages into a local pacman repository listed above all others, and checks this git repository for their updates.
 
+This takes two repositories with different jobs:
+
+- `sachmata` is this git repository, a PKGBUILD repository known only to paru (`paru.conf`). Paru compares its pushed `.SRCINFO` with the installed versions and builds from its `PKGBUILD`s. Pacman can't build, so it can't use it.
+- `sachmata-local` is a pacman repository of built packages (`pacman.conf`, and `LocalRepo` in `paru.conf`). Paru adds each build to it and pacman installs from it. Being listed first keeps your builds ahead of `cachyos`; a package installed as a loose file with `pacman -U` would be replaced by a newer sync-repository version.
+
 1. Create the local repository:
 
    ```sh
@@ -101,6 +106,19 @@ Some of these packages also exist in a sync repository (e.g. `claude-code` and `
 `paru -Qu` doesn't give the PKGBUILD repository priority: it reports AUR versions of these packages (e.g. a newer AUR `pkgrel`) and misses this repository's updates. Check with `paru -Syu`, which lists the upgrades before asking.
 
 Don't list these packages in `IgnorePkg`: paru honours it too and would skip their upgrades.
+
+### Removing a package
+
+`LocalRepo` puts every package paru builds into `sachmata-local`, including AUR packages and their build-only dependencies, and uninstalling doesn't remove them. Paru keeps checking them against the AUR (e.g. `:: marked out of date: <package>` for a package no longer installed). After uninstalling, remove it from the local repository too:
+
+```sh
+repo-remove /var/lib/repo/sachmata-local/sachmata-local.db.tar.gz <package>
+rm /var/lib/repo/sachmata-local/<package>-*.pkg.tar.zst
+rm -rf ~/.cache/paru/clone/<package>   # paru's AUR clone, if any
+sudo pacman -Sy
+```
+
+`pacman -Sl sachmata-local` lists the repository; entries without `[installed]` are leftovers.
 
 ## Adding a package
 
