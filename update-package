@@ -70,6 +70,6 @@ fi
 
 cat <<EOF
 ==> Done. Next:
-    cd ${pkg} && makepkg -si
     git commit -am 'Update ${pkg} to ${target}-1' && git push
+    paru -Syu    # builds from the pushed .SRCINFO into sachmata-local
 EOF
