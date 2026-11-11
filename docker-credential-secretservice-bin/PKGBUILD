@@ -2,7 +2,7 @@
 # Maintainer: ThePanz <thepanz@gmail.com>
 
 pkgname=docker-credential-secretservice-bin
-pkgver=0.9.12
+pkgver=0.9.13
 pkgrel=1
 pkgdesc="Store docker credentials using the D-Bus Secret Service"
 arch=('x86_64' 'aarch64')
@@ -21,8 +21,8 @@ source_aarch64=("${pkgname}-${pkgver}-aarch64::${url}/releases/download/v${pkgve
 
 # Binary checksums match upstream's checksums.txt release asset
 sha256sums=('a6c2a5fdf40879f644bdb0da9042f245e7e263237d623264aafcf2470610ad8c')
-sha256sums_x86_64=('a7031335bebc9a8573fbacae6e56fe7848a360d6746c62a7680849012dac0068')
-sha256sums_aarch64=('8075d247efcb133805d63bebc797833e108c5dca36351d501f87c031c683823f')
+sha256sums_x86_64=('66e48d8e318afa2cda54c2d3e51d42ee78ed06834b5b931abe4f88df640e11ae')
+sha256sums_aarch64=('3ad619667bc886e30df7d3d4d1c453cacd6b9eeda3e168749921c9c09e0013dc')
 
 package() {
     install -D -m 0755 "${srcdir}/${pkgname}-${pkgver}-${CARCH}" "${pkgdir}/usr/bin/docker-credential-secretservice"
