@@ -9,7 +9,7 @@
 
 pkgname=claude-desktop
 pkgver=5.1231.2
-pkgrel=2
+pkgrel=3
 pkgdesc="Official Claude AI desktop app from Anthropic — Chat, Cowork, and Claude Code"
 arch=('x86_64' 'aarch64')
 url="https://claude.com/download"
@@ -94,7 +94,7 @@ options=('!strip' '!debug')
 _repo="https://downloads.claude.ai/claude-desktop/apt/stable"
 _pool="pool/main/c/${pkgname}"
 source=("${pkgname}.sh"
-        "stop-before-gnome-shell.conf"
+        "quit-before-children.conf"
         "${pkgname}-${pkgver}-${pkgrel}-Release::${_repo}/dists/stable/Release"
         "${pkgname}-${pkgver}-${pkgrel}-Release.sig::${_repo}/dists/stable/Release.gpg")
 source_x86_64=("${_repo}/${_pool}/${pkgname}_${pkgver}_amd64.deb"
@@ -104,7 +104,7 @@ source_aarch64=("${_repo}/${_pool}/${pkgname}_${pkgver}_arm64.deb"
 # The repository metadata changes with every release; it is verified by the
 # Release signature and the checks in prepare() instead
 sha256sums=('2b50c019e70b263750255c446bab8db6ab1e50c7396d37ef6547cf118131da65'
-            'f427a9a8e0d98a03349adcec05be432cdca022c26d8af994417300feb1c92acd'
+            '41dccc02c1aac3cda3887e2cf2f7ed088da15ad4d6b55b6dd469e0a5ed431ff7'
             'SKIP'
             'SKIP')
 sha256sums_x86_64=('eb4d16c9aff0a696366d88728f74fa55136be7cfde3c1fe35af4062b45955b6f'
@@ -172,11 +172,11 @@ package() {
   # to start; restore the bit there with chmod 4755.
   chmod 0755 "$pkgdir/usr/lib/claude-desktop/chrome-sandbox"
 
-  # Stop the app before GNOME Shell at logout, restart and shutdown: when
-  # both go down together, Claude mistakes losing the display for GPU
-  # crashes and disables hardware acceleration. Details in the file.
-  install -Dm644 stop-before-gnome-shell.conf \
-    "$pkgdir/usr/lib/systemd/user/app-gnome-com.anthropic.Claude-.scope.d/stop-before-gnome-shell.conf"
+  # At logout, restart and shutdown, quit the main process before systemd
+  # kills its child processes: otherwise Claude mistakes their deaths for
+  # GPU crashes and disables hardware acceleration. Details in the file.
+  install -Dm644 quit-before-children.conf \
+    "$pkgdir/usr/lib/systemd/user/app-com.anthropic.Claude-.scope.d/quit-before-children.conf"
 
   # lintian is Debian's package linter; its override file has no
   # consumer on Arch.
