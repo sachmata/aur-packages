@@ -9,7 +9,7 @@
 
 pkgname=claude-desktop
 pkgver=5.11492.2
-pkgrel=1
+pkgrel=2
 pkgdesc="Official Claude AI desktop app from Anthropic — Chat, Cowork, and Claude Code"
 arch=('x86_64' 'aarch64')
 url="https://claude.com/download"
@@ -75,10 +75,18 @@ depends_x86_64=('qemu-system-x86' 'edk2-ovmf')
 optdepends_aarch64=('qemu-system-aarch64: run Cowork tasks in a local virtual machine'
                     'edk2-aarch64: UEFI firmware for the Cowork virtual machine')
 
+# Tray icon: Electron registers a StatusNotifierItem directly over D-Bus
+# and never loads libayatana-appindicator (the .deb's "Recommends:" is a
+# leftover; the binary has no reference to it). It needs a
+# StatusNotifierWatcher/host on the session bus, which KDE Plasma and most
+# panels provide but stock GNOME Shell does not. Without one the app shows
+# no icon and closing its window quits it instead of hiding to the tray.
+# Ubuntu's GNOME ships the AppIndicator extension enabled; on Arch it must
+# be installed and enabled by hand.
 optdepends=('gjs: GNOME Shell search provider for Claude sessions'
             'gnome-keyring: credential storage via Secret Service (GNOME)'
+            'gnome-shell-extension-appindicator: system tray icon on GNOME'
             'kwallet: credential storage (KDE Plasma)'
-            'libayatana-appindicator: system tray icon'
             'xdg-desktop-portal-gtk: portal backend for GTK desktops'
             'xdg-desktop-portal-kde: portal backend for KDE Plasma')
 
