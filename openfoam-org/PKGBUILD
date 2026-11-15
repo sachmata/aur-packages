@@ -1,0 +1,202 @@
+# SPDX-License-Identifier: 0BSD
+# Maintainer: faruq <zhao@faruq.top>
+# Contributor: envolution
+# Contributor: Jingbei Li <i@jingbei.li>
+# Contributor: Xwang <xwaang1976@gmail.com>
+# Contributor: George Eleftheriou <eleftg>
+# Contributor: Andrew Fischer <andrew_at_apastron.co>
+# shellcheck shell=bash disable=SC2034,SC2154
+
+pkgbase=openfoam
+pkgname=openfoam-org
+pkgver=14.20261111+64cfdf5
+_pkgver="${pkgver%%.*}"
+_subver_and_commit="${pkgver#*.}"
+_subver="${_subver_and_commit%+*}"
+# Full commit of upstream's master that pkgver's short hash names. Upstream
+# signs neither commits nor tags, so the build is pinned by commit, and
+# prepare() checks that it is on master (GitHub also serves pull request
+# refs, whose commits come from forks).
+_commit=64cfdf5481e156d52872271e913b273260375e84
+pkgrel=1
+pkgdesc="The open source CFD toolbox (www.openfoam.org)"
+_distpkgbase=OpenFOAM
+_gitname="$_distpkgbase-$_pkgver"
+# wmake uses its own optimisation/link flags and ignores makepkg CFLAGS/CXXFLAGS/LDFLAGS.
+# Symbols are kept to simplify debugging of user-compiled solvers.
+options=(!strip !buildflags)
+arch=('x86_64')
+url="https://www.openfoam.org"
+license=("GPL-3.0-or-later")
+depends=(
+  glibc
+  gcc-libs
+  boost
+  zlib
+  metis
+  parmetis
+  scotch
+  zoltan
+  openmpi
+  paraview
+  vtk
+  qt6-base
+  fmt
+  freetype2
+  jsoncpp
+  onetbb
+  protobuf
+  libglvnd
+)
+makedepends=(
+  git
+  cmake
+  flex
+  cli11
+  nlohmann-json
+  fast_float
+)
+optdepends=(
+  'gnuplot: for foamMonitor and graph plotting'
+  'gcc: for compiling user applications with wmake'
+  'make: for compiling user applications with wmake'
+)
+provides=(openfoam)
+source=(
+  "$_gitname-$_subver::git+https://github.com/OpenFOAM/OpenFOAM-${_pkgver}.git#commit=${_commit}"
+  openfoam.install
+)
+install="${pkgbase}.install"
+# The full commit pins the git source's content
+sha256sums=('SKIP'
+  'a114fe7db76febbac9a6b37800c96391c0ca18948b4a17f2095f4ae5a2be2fc8')
+
+prepare() {
+  cd "$srcdir"
+
+  if [[ ${_commit:0:7} != "${pkgver#*+}" ]]; then
+    echo "_commit ${_commit} does not match pkgver ${pkgver}" >&2
+    return 1
+  fi
+  if [[ -d "${_gitname}-${_subver}" ]]; then
+    # Fetch master from the local mirror (origin), which makepkg has just
+    # updated from upstream, and require the pinned commit to be on it
+    git -C "${_gitname}-${_subver}" fetch -q --force origin \
+      "+refs/heads/master:refs/remotes/origin/master"
+    if ! git -C "${_gitname}-${_subver}" merge-base --is-ancestor "$_commit" origin/master; then
+      echo "commit ${_commit} is not on upstream's master" >&2
+      return 1
+    fi
+
+    rm -rf "${_distpkgbase}-${_pkgver}"
+    mv "${_gitname}-${_subver}" "${_distpkgbase}-${_pkgver}"
+  fi
+
+  local bashrc="${_distpkgbase}-${_pkgver}/etc/bashrc"
+
+  sed -i "s|^export WM_PROJECT_VERSION=.*|export WM_PROJECT_VERSION=${_pkgver}|" "$bashrc"
+  cp "$bashrc" "$bashrc.prepared"
+
+  # The build uses bashrc; the installed copy is replaced by bashrc.prepared,
+  # so adjust FOAM_INST_DIR for the post-install environment here.
+  sed -i 's|^# export FOAM_INST_DIR=.*|export FOAM_INST_DIR=/opt/\$WM_PROJECT|' \
+    "$bashrc.prepared"
+
+  # Use system libraries from Arch
+  cat <<EOF >"${_distpkgbase}-${_pkgver}/etc/prefs.sh"
+# System-wide settings for Arch Linux
+export SCOTCH_TYPE=system
+export METIS_TYPE=system
+export PARMETIS_TYPE=system
+export ZOLTAN_TYPE=system
+EOF
+
+  # wmkdep only understands -I; CMake emits -isystem, so convert for
+  # dependency generation (otherwise vtk/paraview headers are never tracked).
+  sed -i 's#CXX_INCLUDES)")#CXX_INCLUDES)" | sed "s/-isystem /-I/g")#' \
+    "${_distpkgbase}-${_pkgver}/applications/utilities/postProcessing/graphics/PVReaders/Allwmake"
+
+  # flex 2.6.10 (CachyOS) defines YY_BUF_SIZE only after the lexer's %{ %}
+  # prologue, where chemkinLexer.L reads it. Define it first, with flex's
+  # x86_64 default (2 * 8192); flex's own definition is guarded by #ifndef.
+  sed -i 's|^int Foam::chemkinReader::yyBufSize = YY_BUF_SIZE;|#ifndef YY_BUF_SIZE\n#define YY_BUF_SIZE 16384\n#endif\n&|' \
+    "${_distpkgbase}-${_pkgver}/applications/utilities/thermophysical/chemkinToFoam/chemkinReader/chemkinLexer.L"
+}
+
+build() {
+  cd "${_distpkgbase}-${_pkgver}"
+
+  # Number of parallel compile jobs: WM_NCOMPPROCS from the environment
+  # (e.g. `WM_NCOMPPROCS=4 paru -S openfoam-org`) if set, else MAKEFLAGS.
+  # A MAKEFLAGS given on the command line doesn't get here: makepkg resets it
+  # from makepkg.conf. Read before sourcing bashrc, which may change it.
+  local _jval=${WM_NCOMPPROCS:-}
+
+  # Initialise the OpenFOAM build environment
+  source etc/bashrc || true
+  if [[ -z $WM_OPTIONS || -z $FOAM_LIBBIN || ! -d $WM_PROJECT_DIR ]]; then
+    echo "Failed to initialise the OpenFOAM build environment" >&2
+    return 1
+  fi
+
+  if [[ ! $_jval =~ ^[1-9][0-9]*$ ]]; then
+    # Extract the parallelism value from MAKEFLAGS
+    _jval=1
+    if [[ $MAKEFLAGS =~ -j[[:space:]]*([0-9]+) ]]; then
+      _jval="${BASH_REMATCH[1]}"
+    elif [[ $MAKEFLAGS =~ --jobs=([0-9]+) ]]; then
+      _jval="${BASH_REMATCH[1]}"
+    fi
+  fi
+  # Allwmake -j sets WM_NCOMPPROCS for wmake, which runs make -j with it
+  echo "Compiling with ${_jval} parallel jobs"
+
+  # The build runs as a recursive make chain; without this flag, the nested
+  # `make --eval` calls in PVReaders/Allwmake print "Entering directory"
+  # to stdout, which pollutes ParaView_INCLUDES/DEFINES and breaks wmkdep.
+  export MAKEFLAGS=--no-print-directory
+
+  export PATH="$PWD/wmake:$PATH"
+  wmakeLnIncludeAll -j "$_jval"
+  ./Allwmake -s -q -j "$_jval"
+}
+
+package() {
+  local installdir="${_distpkgbase}-${_pkgver}"
+  local optdir="${pkgdir}/opt/${_distpkgbase}"
+
+  install -d "$optdir" "${pkgdir}/etc/profile.d"
+
+  cp -r "$installdir" "$optdir"
+
+  local baseclean="${optdir}/${installdir}"
+
+  # Remove build artefacts
+  rm -rf "$baseclean"/platforms/*/applications "$baseclean"/platforms/*/src
+  rm -f "$baseclean"/platforms/*/lib/*.o
+
+  # Remove build metadata
+  rm -rf "$baseclean/.git" "$baseclean/.arch_cache" \
+    "$baseclean/etc/bashrc.prepared" \
+    "$baseclean/applications/utilities/postProcessing/graphics/PVReaders/Make" \
+    "$baseclean/applications/utilities/postProcessing/graphics/PVReaders/PVdummy/Make"
+
+  # Configure profile.d
+  local profile="${pkgdir}/etc/profile.d/openfoam-${_pkgver}.sh"
+  {
+    echo "export FOAM_INST_DIR=/opt/${_distpkgbase}"
+    echo "alias ofoam=\"source \${FOAM_INST_DIR}/${installdir}/etc/bashrc\""
+    echo "alias ofoam${_pkgver}=\"source \${FOAM_INST_DIR}/${installdir}/etc/bashrc\""
+  } >"$profile"
+  chmod 755 "$profile"
+
+  # Keep an empty ThirdParty directory
+  install -d "${optdir}/ThirdParty-${_pkgver}"
+
+  # Install the prepared bashrc
+  install -Dm755 "${installdir}/etc/bashrc.prepared" \
+    "${baseclean}/etc/bashrc"
+
+  install -Dm644 "${installdir}/COPYING" \
+    -t "${pkgdir}/usr/share/licenses/${pkgname}"
+}

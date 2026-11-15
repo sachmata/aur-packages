@@ -244,3 +244,43 @@ update_parmetis() {
     set_sum_at sha256sums 0 "$orig" &&
     set_sum_at sha256sums 1 "$debian"
 }
+
+# --- openfoam-org -------------------------------------------------------------
+
+# Versions are <major>.<committer date of the master commit>+<short commit>,
+# as on the AUR. Each major version is its own repository (OpenFOAM-14), whose
+# master carries that release's fixes. Upstream signs nothing, so PKGBUILD pins
+# the full commit and prepare() checks it is on master.
+_openfoam_api=https://api.github.com/repos/OpenFOAM
+
+upstream_openfoam-org() {
+  local major commit
+  major=$(local_version openfoam-org) major=${major%%.*}
+  # A new major release is a new repository; this only tracks the current one
+  if fetch -o /dev/null "${_openfoam_api}/OpenFOAM-$((major + 1))" 2>/dev/null; then
+    echo "warning: OpenFOAM-$((major + 1)) exists; openfoam-org follows OpenFOAM-${major}" >&2
+  fi
+  commit=$(fetch "${_openfoam_api}/OpenFOAM-${major}/commits/master") || return
+  jq -er --arg major "$major" \
+    '"\($major).\(.commit.committer.date[0:10] | gsub("-"; ""))+\(.sha[0:7])"' <<<"$commit"
+}
+
+update_openfoam-org() {
+  local ver=$1 major date short commit sha status
+  [[ $ver =~ ^([0-9]+)\.([0-9]{8})\+([0-9a-f]{7})$ ]] ||
+    die "openfoam-org version must look like 14.20261111+64cfdf5, not '${ver}'" || return
+  major=${BASH_REMATCH[1]} date=${BASH_REMATCH[2]} short=${BASH_REMATCH[3]}
+
+  commit=$(fetch "${_openfoam_api}/OpenFOAM-${major}/commits/${short}") || return
+  sha=$(jq -er .sha <<<"$commit") || return
+  [[ $sha == "$short"* ]] || die "commit ${short} resolved to ${sha}" || return
+  [[ $(jq -r '.commit.committer.date[0:10] | gsub("-"; "")' <<<"$commit") == "$date" ]] ||
+    die "commit ${short} is not from ${date}" || return
+  # Only commits on master, not those reachable only from pull request refs
+  status=$(fetch "${_openfoam_api}/OpenFOAM-${major}/compare/${sha}...master" | jq -r .status) || return
+  [[ $status == ahead || $status == identical ]] ||
+    die "commit ${sha} is not on OpenFOAM-${major}'s master (${status})" || return
+
+  set_var pkgver "$ver" &&
+    set_var _commit "$sha"
+}

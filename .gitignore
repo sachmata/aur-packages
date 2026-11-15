@@ -41,3 +41,6 @@ parmetis/*-Release
 parmetis/*-Release.sig
 parmetis/*-Sources.xz
 parmetis/*.sha256
+
+# openfoam-org: git mirror of the source repository
+openfoam-org/OpenFOAM-*/

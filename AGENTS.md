@@ -16,6 +16,7 @@ The AUR maintainer's pinned checksums are not a source of truth; several package
 - When upstream signs its release metadata, verify it at build time: download the metadata and its detached signature as sources (`<name>` plus `<name>.sig`), set `validpgpkeys`, vendor the key under `keys/pgp/`, and check in `prepare()` that the payload matches the signed metadata, failing the build on a mismatch. See `claude-code` (signed manifest), `claude-desktop` and `spotify` (signed apt `Release` → `Packages` → `.deb`), `parmetis` (Debian's signed `Release` → `Sources.xz` → source tarballs).
 - Before trusting a new signing key, confirm its fingerprint against upstream's documentation.
 - When upstream only publishes checksums (`docker-credential-secretservice-bin`), take the pinned values from that file.
+- When upstream signs nothing and the source is its git repository (`openfoam-org`), pin the full commit in `_commit` (checksum `SKIP`) and check in `prepare()` that it is on upstream's release branch: GitHub also serves pull request refs, so makepkg's mirror holds commits from forks. `update_<pkgname>` checks the same through the GitHub API.
 - Release metadata changes with every upstream release, so its checksum entries are `SKIP`; the signature covers it. Never run `updpkgsums` or `makepkg -g` on these packages: they replace the `SKIP` entries with fixed hashes. Use `./update-package`, which takes checksums from upstream's metadata.
 
 ### Own packages (not from the AUR)
