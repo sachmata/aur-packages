@@ -17,7 +17,7 @@ pkgver=v2606
 # commit, and prepare() checks that the tag still names it.
 _commit=481094fdf34f11ed6d0d603ee59a858a0124236d
 _dist=${_distname}-${pkgver}
-pkgrel=1
+pkgrel=2
 pkgdesc="The open source CFD toolbox (www.openfoam.com)"
 arch=(x86_64)
 url="https://www.${pkgname//-/.}"
@@ -99,6 +99,9 @@ export WM_MPLIB=SYSTEMOPENMPI
   # -petsc petsc-system -hypre hypre-system -mpfr mpfr-system -gmp gmp-system
   # kahip (kahipDecomp) is only in the AUR: disabled rather than building
   # an unreviewed AUR package; scotch and metis cover decomposition.
+  # ParaView takes plain "system": etc/config.sh/paraview only matches that,
+  # and "paraview-system" (the AUR's value) left PV_PLUGIN_PATH unset, so
+  # paraFoam never found the reader plugins.
 
   "${projectDir}"/bin/tools/foamConfigurePaths \
     -adios adios-system \
@@ -107,7 +110,7 @@ export WM_MPLIB=SYSTEMOPENMPI
     -fftw fftw-system \
     -kahip kahip-none \
     -metis metis-system \
-    -paraview paraview-system \
+    -paraview system \
     -scotch scotch-system \
     ;
 
