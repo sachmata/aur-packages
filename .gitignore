@@ -36,15 +36,6 @@ claude-desktop/*-Packages
 # gpvpn: git mirror of the source repository
 gpvpn/gpvpn/
 
-# parmetis: repository metadata fetched at build time
-parmetis/*-Release
-parmetis/*-Release.sig
-parmetis/*-Sources.xz
-parmetis/*.sha256
-
-# openfoam-org: git mirror of the source repository
-openfoam-org/OpenFOAM-*/
-
 # openfoam-com: git mirrors of the source repository and bundled submodules
 openfoam-com/openfoam/
 openfoam-com/cfmesh/
