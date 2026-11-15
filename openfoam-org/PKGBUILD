@@ -18,7 +18,7 @@ _subver="${_subver_and_commit%+*}"
 # prepare() checks that it is on master (GitHub also serves pull request
 # refs, whose commits come from forks).
 _commit=64cfdf5481e156d52872271e913b273260375e84
-pkgrel=1
+pkgrel=2
 pkgdesc="The open source CFD toolbox (www.openfoam.org)"
 _distpkgbase=OpenFOAM
 _gitname="$_distpkgbase-$_pkgver"
@@ -31,7 +31,6 @@ license=("GPL-3.0-or-later")
 depends=(
   glibc
   gcc-libs
-  boost
   zlib
   metis
   parmetis
@@ -114,6 +113,13 @@ EOF
   # wmkdep only understands -I; CMake emits -isystem, so convert for
   # dependency generation (otherwise vtk/paraview headers are never tracked).
   sed -i 's#CXX_INCLUDES)")#CXX_INCLUDES)" | sed "s/-isystem /-I/g")#' \
+    "${_distpkgbase}-${_pkgver}/applications/utilities/postProcessing/graphics/PVReaders/Allwmake"
+
+  # The ParaView plugins are built with CMake, which would give them a
+  # RUNPATH of the build tree's library directories plus an empty entry,
+  # which the dynamic linker takes as the current directory. They need none:
+  # OpenFOAM's bashrc puts their directories on LD_LIBRARY_PATH.
+  sed -i 's#^\( *\)cmake \.\./\.\.$#\1cmake -DCMAKE_SKIP_RPATH=ON ../..#' \
     "${_distpkgbase}-${_pkgver}/applications/utilities/postProcessing/graphics/PVReaders/Allwmake"
 
   # flex 2.6.10 (CachyOS) defines YY_BUF_SIZE only after the lexer's %{ %}
