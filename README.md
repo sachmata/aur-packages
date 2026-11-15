@@ -12,6 +12,7 @@ Personal AUR package customizations, one directory per package.
 | [claude-desktop](claude-desktop/) | https://aur.archlinux.org/claude-desktop.git | `20669f6` | 2.31226.1-1 |
 | [parmetis](parmetis/) | https://aur.archlinux.org/parmetis.git | `78a4979` | 1:4.0.3+p7-1 |
 | [openfoam-org](openfoam-org/) | https://aur.archlinux.org/openfoam.git | `f807c40` | 14.20261008+a4867fc-2 |
+| [openfoam-com](openfoam-com/) | https://aur.archlinux.org/openfoam-com.git | `cbd6f08` | v2606-1 |
 | [gpvpn](gpvpn/) | own: https://github.com/sachmata/gpvpn (not on the AUR) | — | 0.7.1-1 |
 
 ## Checking for updates

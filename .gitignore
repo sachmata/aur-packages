@@ -44,3 +44,11 @@ parmetis/*.sha256
 
 # openfoam-org: git mirror of the source repository
 openfoam-org/OpenFOAM-*/
+
+# openfoam-com: git mirrors of the source repository and bundled submodules
+openfoam-com/openfoam/
+openfoam-com/cfmesh/
+openfoam-com/adios/
+openfoam-com/OpenQBMM/
+openfoam-com/visualization/
+openfoam-com/external-solver/

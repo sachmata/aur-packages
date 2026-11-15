@@ -284,3 +284,37 @@ update_openfoam-org() {
   set_var pkgver "$ver" &&
     set_var _commit "$sha"
 }
+
+# --- openfoam-com -------------------------------------------------------------
+
+# Releases are tags OpenFOAM-v<api>, patch releases OpenFOAM-v<api>.<yymmdd>;
+# pkgver is the part after "OpenFOAM-". Upstream signs nothing, so PKGBUILD pins
+# the commit the tag points to (which also pins the bundled submodules), and
+# prepare() checks the tag still names it.
+_openfoam_com_repo=https://gitlab.com/openfoam/core/openfoam.git
+
+upstream_openfoam-com() {
+  # Only v<digits>[.<digits>] tags: not the odd underscore patch tags of
+  # v2012, or anything pacman couldn't order
+  git ls-remote --tags --refs "$_openfoam_com_repo" 'OpenFOAM-v*' |
+    sed -nE 's|.*\trefs/tags/OpenFOAM-(v[0-9]+(\.[0-9]+)?)$|\1|p' | sort -V | tail -n1
+}
+
+update_openfoam-com() {
+  local ver=$1 refs commit tag
+  [[ $ver =~ ^v[0-9]+(\.[0-9]+)?$ ]] ||
+    die "openfoam-com version must look like v2606, not '${ver}'" || return
+  tag=refs/tags/OpenFOAM-${ver}
+  # An annotated tag's commit is its peeled ^{} line; a lightweight tag has
+  # only the plain line
+  refs=$(git ls-remote "$_openfoam_com_repo" "$tag" "${tag}^{}") || return
+  commit=$(awk -v t="$tag" '
+    $2 == t "^{}" { peeled = $1 }
+    $2 == t       { plain = $1 }
+    END           { print (peeled ? peeled : plain) }
+  ' <<<"$refs")
+  [[ $commit =~ ^[0-9a-f]{40}$ ]] || die "tag OpenFOAM-${ver} not found in ${_openfoam_com_repo}" || return
+
+  set_var pkgver "$ver" &&
+    set_var _commit "$commit"
+}

@@ -1,0 +1,291 @@
+# Maintainer: Carlos Aznarán <caznaranl@uni.pe>
+# Contributor: Norbert Weber <norbert.weber_at_hzdr.de>
+# Contributor: Marc Olesen
+# Contributor: Xwang <xwaang1976@gmail.com>
+# Contributor: George Eleftheriou <eleftg>
+# Contributor: Andrew Fischer <andrew_at_apastron.co>
+# Contributor: <gucong43216@gmail.com>
+
+# Installs as (for example)
+# /opt/OpenFOAM/OpenFOAM-v2506
+
+_distname=OpenFOAM
+pkgname=${_distname,,}-com
+pkgver=v2606
+# Commit the OpenFOAM-${pkgver} tag points to. Upstream signs neither tags nor
+# release tarballs and publishes no checksums, so the build is pinned by
+# commit, and prepare() checks that the tag still names it.
+_commit=481094fdf34f11ed6d0d603ee59a858a0124236d
+_dist=${_distname}-${pkgver}
+pkgrel=1
+pkgdesc="The open source CFD toolbox (www.openfoam.com)"
+arch=(x86_64)
+url="https://www.${pkgname//-/.}"
+license=(GPL-3.0-or-later)
+install="${pkgname}.install"
+# From the binaries' NEEDED entries (readelf -d). adios2 is for the adios
+# module; paraview to vtk's libraries for the ParaView reader plugins. No
+# parmetis: OpenFOAM.com doesn't use it. kahip is disabled in prepare().
+depends=(gcc-libs glibc fftw gmp mpfr metis openmpi readline scotch zlib
+  adios2 paraview vtk qt6-base fmt freetype2 jsoncpp libglvnd onetbb protobuf) # petsc hypre
+# CGAL and the boost parts it uses are header-only
+makedepends=(git cmake flex cgal boost)
+# The release tarball bundles these submodules (the others are left out);
+# their commits are pinned by the superproject commit. The source names carry
+# no version, so makepkg's git mirrors are reused across releases.
+_submodules=(
+  cfmesh:plugins/cfmesh
+  adios:modules/adios
+  OpenQBMM:modules/OpenQBMM
+  visualization:modules/visualization
+  external-solver:modules/external-solver
+)
+source=(
+  "openfoam::git+https://gitlab.com/openfoam/core/openfoam.git#commit=${_commit}"
+  "cfmesh::git+https://gitlab.com/openfoam/community/cfmesh.git"
+  "adios::git+https://gitlab.com/openfoam/modules/adiosfoam.git"
+  "OpenQBMM::git+https://github.com/OpenQBMM/OpenQBMM.git"
+  "visualization::git+https://gitlab.com/openfoam/modules/visualization.git"
+  "external-solver::git+https://gitlab.com/openfoam/modules/external-solver.git"
+)
+# The full commit pins the superproject, and through it the submodules
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+
+prepare() {
+  if [ -n "$WM_PROJECT_DIR" ]; then
+    echo
+    echo -e "\e[1m\e[5m\e[31mPlease make sure that no OpenFOAM version is sourced in bashrc.\e[0m"
+    echo
+    return 1
+  fi
+
+  cd "${srcdir}/openfoam"
+
+  # makepkg's plain `git fetch` keeps a stale tag in a reused src/; force it
+  # from the local mirror (origin), which makepkg has just updated
+  local tag="${_distname}-${pkgver}" tagged
+  git fetch -q --force origin "+refs/tags/${tag}:refs/tags/${tag}"
+  tagged=$(git rev-parse --verify "refs/tags/${tag}^{commit}")
+  if [[ $tagged != "$_commit" ]]; then
+    echo "tag ${tag} is ${tagged}, expected ${_commit}" >&2
+    return 1
+  fi
+
+  # Check out each submodule at the commit the superproject records, from
+  # makepkg's mirror of it
+  local entry name path
+  for entry in "${_submodules[@]}"; do
+    name=${entry%%:*} path=${entry#*:}
+    git submodule init -- "$path"
+    git config "submodule.${name}.url" "${SRCDEST}/${name}"
+    git -c protocol.file.allow=always submodule update --force -- "$path"
+  done
+
+  # Build in a directory named like the installed one
+  rm -rf "${srcdir}/${_dist}"
+  ln -s openfoam "${srcdir}/${_dist}"
+
+  projectDir="${srcdir}/${_dist}"
+
+  # Generate and install the system preferences file
+  echo "# Preferences for arch-linux
+export WM_COMPILER_TYPE=system
+export WM_MPLIB=SYSTEMOPENMPI
+# End" \
+    >"${projectDir}"/etc/prefs.sh
+
+  # Configure components.
+  # Use system values for adios2, boost/cgal, fftw, metis, paraview, scotch
+  # -petsc petsc-system -hypre hypre-system -mpfr mpfr-system -gmp gmp-system
+  # kahip (kahipDecomp) is only in the AUR: disabled rather than building
+  # an unreviewed AUR package; scotch and metis cover decomposition.
+
+  "${projectDir}"/bin/tools/foamConfigurePaths \
+    -adios adios-system \
+    -boost boost-system \
+    -cgal cgal-system \
+    -fftw fftw-system \
+    -kahip kahip-none \
+    -metis metis-system \
+    -paraview paraview-system \
+    -scotch scotch-system \
+    ;
+
+  # flex 2.6.10 (CachyOS) defines YY_BUF_SIZE only after the lexer's %{ %}
+  # prologue, where chemkinLexer.L reads it. Define it first, with flex's
+  # x86_64 default (2 * 8192); flex's own definition is guarded by #ifndef.
+  sed -i 's|^int Foam::chemkinReader::yyBufSize = YY_BUF_SIZE;|#ifndef YY_BUF_SIZE\n#define YY_BUF_SIZE 16384\n#endif\n&|' \
+    "${projectDir}"/src/thermophysicalModels/reactionThermo/chemistryReaders/chemkinReader/chemkinLexer.L
+
+  # viewFactorsGen takes CGAL's headers but not its libraries; with CGAL 6
+  # the headers use GMP (through boost multiprecision), so the link fails
+  # with undefined __gmpz_* and stops the applications build. Link
+  # $(CGAL_LIBRARIES) (-lmpfr -lgmp), as foamyMesh does. Not fixed upstream
+  # as of maintenance-2606 and develop (2026-11-15).
+  sed -i 's|^    -lradiationModels$|& \\\n    $(CGAL_LIBRARIES)|' \
+    "${projectDir}"/applications/utilities/preProcessing/viewFactorsGen/Make/options
+  grep -qF '$(CGAL_LIBRARIES)' \
+    "${projectDir}"/applications/utilities/preProcessing/viewFactorsGen/Make/options
+
+  # Arch's adios2-config prints `-isystem /usr/include`, which breaks GCC's
+  # `#include_next <stdlib.h>` in <cstdlib>, so no adiosFoam source compiles,
+  # and `-rpath,/usr/lib`, which is redundant. Drop both.
+  sed -i -e 's|^\(ADIOS_FLAGS := \)\(\$(shell .*)\)$|\1$(subst -isystem /usr/include,,\2)|' \
+    -e 's|^\(ADIOS_LIBS  := \)\(\$(shell .*)\)$|\1$(subst -Wl$(comma)-rpath$(comma)/usr/lib ,,\2)|' \
+    -e '1i comma := ,' \
+    "${projectDir}"/wmake/rules/General/ADIOS2
+  grep -qF 'subst -isystem' "${projectDir}"/wmake/rules/General/ADIOS2
+
+  # The ParaView reader plugins (paraFoam's OpenFOAM and blockMesh readers)
+  # are written for Qt 5; Arch's ParaView 6 is built with Qt 6, so their
+  # CMake configure fails ("Unknown CMake command qt5_wrap_cpp") and paraFoam
+  # falls back to ParaView's builtin reader. Use the Qt 6 names. Not fixed
+  # upstream as of the visualization module's 49c25b4 (2026-03-18).
+  local f
+  for f in $(grep -rlE 'qt5_wrap_cpp|Qt5::' \
+      "${projectDir}"/modules/visualization/src/paraview-plugins); do
+    sed -i 's/qt5_wrap_cpp/qt6_wrap_cpp/g; s/Qt5::/Qt6::/g' "$f"
+  done
+  ! grep -rqE 'qt5_wrap_cpp|Qt5::' \
+    "${projectDir}"/modules/visualization/src/paraview-plugins
+
+  # Their wmake-built libraries look for VTK's headers next to ParaView's
+  # (/usr/include/paraview), but Arch's ParaView uses the separate vtk
+  # package, whose headers are in /usr/include/vtk
+  for f in common blockMeshReader/library foamReader/library; do
+    f="${projectDir}/modules/visualization/src/paraview-plugins/${f}/Make/options"
+    sed -i 's|^\( *\)-I$(PARAVIEW_INC_DIR)/vtkkwiml|\1-I$(PARAVIEW_INC_DIR)/../vtk \\\n&|' "$f"
+    grep -qF -- '-I$(PARAVIEW_INC_DIR)/../vtk' "$f"
+  done
+
+  # For the same reason the reader modules, which include ParaView's client
+  # headers (pqApplicationCore.h), don't find them: they link only VTK and
+  # Qt. Link ParaView::pqCore, which brings its include directory.
+  for f in blockMeshReader foamReader; do
+    f="${projectDir}/modules/visualization/src/paraview-plugins/${f}/plugin/reader/CMakeLists.txt"
+    sed -i 's|^\( *\)Qt6::Gui$|&\n\1ParaView::pqCore|' "$f"
+    grep -qF 'ParaView::pqCore' "$f"
+  done
+
+  # The OpenFOAM reader includes Qt (through ParaView's headers) before
+  # OpenFOAM's, which pull in oneTBB through <execution>. Qt's `emit` macro
+  # then breaks TBB's `void emit()`. Build it with QT_NO_KEYWORDS, as
+  # ParaView itself is; neither it nor ParaView's headers use the keywords.
+  f="${projectDir}/modules/visualization/src/paraview-plugins/foamReader/plugin/reader/CMakeLists.txt"
+  printf '\ntarget_compile_definitions(${TARGET_NAME} PRIVATE QT_NO_KEYWORDS)\n' >>"$f"
+}
+
+build() {
+  if [ -n "$WM_PROJECT_DIR" ]; then
+    echo
+    echo -e "\e[1m\e[5m\e[31mPlease make sure that no OpenFOAM version is sourced in bashrc.\e[0m"
+    echo
+    return 1
+  fi
+
+  projectDir="${srcdir}/${_dist}"
+  [ -f "$projectDir/etc/bashrc" ] || {
+    echo "No $projectDir/etc/bashrc found"
+    return 1
+  }
+
+  # Number of parallel compile jobs: WM_NCOMPPROCS from the environment
+  # (e.g. `WM_NCOMPPROCS=4 paru -S openfoam-com`) if set, else MAKEFLAGS.
+  # A MAKEFLAGS given on the command line doesn't get here: makepkg resets it
+  # from makepkg.conf. Read before sourcing bashrc, which may change it.
+  local _jval=${WM_NCOMPPROCS:-}
+  if [[ ! $_jval =~ ^[1-9][0-9]*$ ]]; then
+    _jval=1
+    if [[ $MAKEFLAGS =~ -j[[:space:]]*([0-9]+) ]]; then
+      _jval="${BASH_REMATCH[1]}"
+    elif [[ $MAKEFLAGS =~ --jobs=([0-9]+) ]]; then
+      _jval="${BASH_REMATCH[1]}"
+    fi
+  fi
+
+  # Avoid external influence on the environment
+  export FOAM_CONFIG_MODE="o"
+  unset FOAM_SETTINGS
+
+  set +e # Turn errexit off
+
+  source "$projectDir"/etc/bashrc '' ||
+    echo "Ignore spurious sourcing error"
+
+  # it seems, the bashrc file destroys 'projectDir'
+  projectDir="${srcdir}/${_dist}"
+
+  set -e # Turn errexit back on
+  cd "$projectDir" || exit
+
+  # Dummy application for testing
+  #./applications/test/00-dummy/Allwmake
+
+  # wmake passes -j ${WM_NCOMPPROCS} to make only when MAKEFLAGS is empty;
+  # otherwise every make inherits makepkg's MAKEFLAGS (-j$(nproc)) and the
+  # job count above has no effect. Nested makes share the top one's jobserver.
+  unset MAKEFLAGS
+
+  echo "Compiling with ${_jval} parallel jobs"
+  ./Allwmake -j "$_jval" -log=log.build
+
+  # Check log for this type of content:
+  #
+  #   api   = 2006
+  #   patch = 1
+  #   bin   = 283 entries
+  #   lib   = 139 entries
+
+  [ -f log.build ] || {
+    echo "No log.build file - build failed entirely"
+    exit 1
+  }
+
+  bins="$(cat log.build | sed -ne 's/.*bin *= *\([0-9][0-9]*\).*/\1/p;' | sed -ne '$p')"
+  libs="$(cat log.build | sed -ne 's/.*lib *= *\([0-9][0-9]*\).*/\1/p;' | sed -ne '$p')"
+
+  if [ "${bins:=0}" = 0 ] || [ "${libs:=0}" = 0 ]; then
+    echo
+    echo "Build failed with $bins executables and $libs libraries"
+    echo "Check the log.build file"
+    echo
+    exit 1
+  fi
+
+  # Remove intermediate build artifacts
+  rm -rf "${projectDir}/build"
+}
+
+package() {
+  cd ${srcdir}
+
+  # Installation directories
+  parentDir="${pkgdir}/opt/${_distname}"
+  projectDir="${parentDir}/${_dist}"
+
+  # Create destination directories
+  install -d "${parentDir}" "${pkgdir}"/etc/profile.d || return 1
+
+  # Copy package to pkgdir (the build tree is src/openfoam, linked as ${_dist}),
+  # without git metadata
+  cp -r "${srcdir}/openfoam" "${projectDir}" || return 1
+  find "${projectDir}" -name .git -exec rm -rf {} +
+  # Leave out OpenQBMM's tests and validation cases (450 MB), as upstream's
+  # release tarball does, and the build log, which only records build paths
+  rm -rf "${projectDir}"/modules/OpenQBMM/{test,validation} \
+    "${projectDir}"/log.build
+
+  # Permission fixes - for system-wide install and use
+  chmod -R go+r "${pkgdir}"/opt
+  chmod -R 755 "${projectDir}"/bin
+  chmod -R 755 "${projectDir}"/etc
+
+  [ -e "${projectDir}"/ThirdParty ] ||
+    echo "system dependencies" >|"${projectDir}"/ThirdParty
+
+  # create aliases. No `paraFoam -builtin` alias (as on the AUR): it was for
+  # the reader plugins not compiling, which prepare() fixes, and it would
+  # keep paraFoam from using them. paraFoam still falls back to ParaView's
+  # builtin reader by itself when the plugin is missing.
+  echo "alias of='source /opt/${_distname}/${_dist}/etc/bashrc'" >>"${pkgdir}/etc/profile.d/${pkgname}.sh"
+}
