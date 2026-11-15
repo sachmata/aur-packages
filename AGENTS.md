@@ -13,7 +13,7 @@ Personal Arch packages, each vendored from the AUR into its own directory and th
 
 The AUR maintainer's pinned checksums are not a source of truth; several packages are bumped by bots. Every package must verify its download against what upstream itself publishes:
 
-- When upstream signs its release metadata, verify it at build time: download the metadata and its detached signature as sources (`<name>` plus `<name>.sig`), set `validpgpkeys`, vendor the key under `keys/pgp/`, and check in `prepare()` that the payload matches the signed metadata, failing the build on a mismatch. See `claude-code` (signed manifest), `claude-desktop` and `spotify` (signed apt `Release` → `Packages` → `.deb`).
+- When upstream signs its release metadata, verify it at build time: download the metadata and its detached signature as sources (`<name>` plus `<name>.sig`), set `validpgpkeys`, vendor the key under `keys/pgp/`, and check in `prepare()` that the payload matches the signed metadata, failing the build on a mismatch. See `claude-code` (signed manifest), `claude-desktop` and `spotify` (signed apt `Release` → `Packages` → `.deb`), `parmetis` (Debian's signed `Release` → `Sources.xz` → source tarballs).
 - Before trusting a new signing key, confirm its fingerprint against upstream's documentation.
 - When upstream only publishes checksums (`docker-credential-secretservice-bin`), take the pinned values from that file.
 - Release metadata changes with every upstream release, so its checksum entries are `SKIP`; the signature covers it. Never run `updpkgsums` or `makepkg -g` on these packages: they replace the `SKIP` entries with fixed hashes. Use `./update-package`, which takes checksums from upstream's metadata.

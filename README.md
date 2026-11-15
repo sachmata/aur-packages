@@ -10,6 +10,7 @@ Personal AUR package customizations, one directory per package.
 | [docker-credential-secretservice-bin](docker-credential-secretservice-bin/) | https://aur.archlinux.org/docker-credential-secretservice-bin.git | `a8ab347` | 0.9.9-1 |
 | [claude-code](claude-code/) | https://aur.archlinux.org/claude-code.git | `9a43483` | 2.1.296-1 |
 | [claude-desktop](claude-desktop/) | https://aur.archlinux.org/claude-desktop.git | `20669f6` | 2.31226.1-1 |
+| [parmetis](parmetis/) | https://aur.archlinux.org/parmetis.git | `78a4979` | 1:4.0.3+p7-1 |
 | [gpvpn](gpvpn/) | own: https://github.com/sachmata/gpvpn (not on the AUR) | — | 0.7.1-1 |
 
 ## Checking for updates
@@ -33,7 +34,7 @@ paru -Syu
 
 `paru -Syu` pulls this repository, builds the new version into the local repository and installs it (see [Installing with paru](#installing-with-paru)).
 
-`update-package` sets `pkgver`, resets `pkgrel` to 1, pins the new checksums from upstream's published metadata (Anthropic's signed release manifest and apt index, Spotify's signed apt index, the GitHub release's `checksums.txt`), regenerates `.SRCINFO` and builds the package, which verifies upstream's signatures. If an edit fails, `PKGBUILD` and `.SRCINFO` are restored.
+`update-package` sets `pkgver`, resets `pkgrel` to 1, pins the new checksums from upstream's published metadata (Anthropic's signed release manifest and apt index, Spotify's signed apt index, Debian's signed `Sources` index, the GitHub release's `checksums.txt`), regenerates `.SRCINFO` and builds the package, which verifies upstream's signatures. If an edit fails, `PKGBUILD` and `.SRCINFO` are restored.
 
 Don't use `updpkgsums` on packages with `SKIP` entries for repository metadata: it replaces them with fixed hashes that break the build once upstream publishes a new release.
 

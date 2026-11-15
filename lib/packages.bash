@@ -39,12 +39,15 @@ apt_field() {
   '
 }
 
+# Escapes the ERE metacharacters of a fixed string (e.g. the + in 4.0.3+p7)
+ere_escape() { sed 's/[][\\.*^$+?(){}|]/\\&/g' <<<"$1"; }
+
 # set_var NAME VALUE: rewrite NAME=VALUE in ./PKGBUILD, keeping its quoting
 set_var() {
   local name=$1 value=$2
   grep -qE "^${name}=" PKGBUILD || die "${name}= not found in PKGBUILD" || return
   sed -i -E "s/^(${name}=)(['\"]?)[^'\"]*(['\"]?)\$/\1\2${value}\3/" PKGBUILD
-  grep -qE "^${name}=['\"]?${value//./\\.}['\"]?\$" PKGBUILD || die "failed to set ${name}"
+  grep -qE "^${name}=['\"]?$(ere_escape "$value")['\"]?\$" PKGBUILD || die "failed to set ${name}"
 }
 
 # set_sum ARRAY HASH: replace the first checksum of ARRAY in ./PKGBUILD, which
@@ -55,6 +58,24 @@ set_sum() {
   grep -qE "^${array}=\('[0-9a-f]+'" PKGBUILD || die "${array}=('<checksum>' not found in PKGBUILD" || return
   sed -i -E "s/^(${array}=\(')[0-9a-f]+'/\1${sum}'/" PKGBUILD
   grep -qE "^${array}=\('${sum}'" PKGBUILD || die "failed to set ${array}"
+}
+
+# set_sum_at ARRAY INDEX HASH: replace the INDEX-th (0-based) checksum of ARRAY
+# in ./PKGBUILD, where the array lists one quoted checksum per line
+set_sum_at() {
+  local array=$1 index=$2 sum=$3 tmp
+  [[ $sum =~ ^[0-9a-f]{64}([0-9a-f]{64})?$ ]] || die "invalid checksum for ${array}[${index}]: '${sum}'" || return
+  tmp=$(awk -v array="$array" -v index_="$index" -v sum="$sum" '
+    index($0, array "=(") == 1 { inarray = 1; n = 0 }
+    inarray && match($0, /'"'"'[0-9a-f]+'"'"'/) {
+      if (n == index_) { $0 = substr($0, 1, RSTART) sum substr($0, RSTART + RLENGTH - 1); done = 1 }
+      n++
+    }
+    inarray && /\)/ { inarray = 0 }
+    { print }
+    END { exit !done }
+  ' PKGBUILD) || die "${array}[${index}] checksum not found in PKGBUILD" || return
+  printf '%s\n' "$tmp" > PKGBUILD
 }
 
 # --- claude-code --------------------------------------------------------------
@@ -176,4 +197,50 @@ update_gpvpn() {
 
   set_var pkgver "$ver" &&
     set_var _commit "$commit"
+}
+
+# --- parmetis -----------------------------------------------------------------
+
+_parmetis_sources=https://deb.debian.org/debian/dists/unstable/non-free/source/Sources.xz
+
+# Prints the parmetis stanza of Debian unstable's non-free Sources index
+# (awk reads to the end: exiting early would fail the pipe with SIGPIPE)
+_parmetis_stanza() {
+  fetch "$_parmetis_sources" | xz -dc |
+    awk 'BEGIN { RS = ""; FS = "\n" } $1 == "Package: parmetis" && !done { print; done = 1 }'
+}
+
+upstream_parmetis() {
+  # Debian version 4.0.3-7 -> 1:4.0.3+p7 (the epoch comes from the AUR package)
+  local debver
+  debver=$(_parmetis_stanza | sed -n 's/^Version: //p') || return
+  [[ $debver =~ ^[0-9.]+-[0-9]+$ ]] || die "unexpected Debian version '${debver}'" || return
+  echo "1:${debver/-/+p}"
+}
+
+update_parmetis() {
+  local ver=$1 epoch pkgver debver upver stanza orig debian
+  [[ $ver =~ ^([0-9]+):([0-9.]+)\+p([0-9]+)$ ]] ||
+    die "parmetis version must look like 1:4.0.3+p7, not '${ver}'" || return
+  epoch=${BASH_REMATCH[1]} pkgver=${BASH_REMATCH[2]}+p${BASH_REMATCH[3]}
+  upver=${BASH_REMATCH[2]} debver=${BASH_REMATCH[2]}-${BASH_REMATCH[3]}
+
+  # Listed in the Sources index covered by the signed Release file;
+  # makepkg and prepare() verify that chain at build time
+  stanza=$(_parmetis_stanza) || return
+  grep -qx "Version: ${debver}" <<<"$stanza" ||
+    die "Debian unstable provides $(sed -n 's/^Version: //p' <<<"$stanza"), not ${debver}" || return
+  sha256_of() {
+    awk -v file="$1" '
+      /^[^ ]/ { insums = ($0 == "Checksums-Sha256:") }
+      insums && $3 == file { print $1 }
+    ' <<<"$stanza"
+  }
+  orig=$(sha256_of "parmetis_${upver}.orig.tar.gz")
+  debian=$(sha256_of "parmetis_${debver}.debian.tar.xz")
+
+  set_var pkgver "$pkgver" &&
+    set_var epoch "$epoch" &&
+    set_sum_at sha256sums 0 "$orig" &&
+    set_sum_at sha256sums 1 "$debian"
 }
