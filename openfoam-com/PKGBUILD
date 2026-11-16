@@ -17,7 +17,7 @@ pkgver=v2606
 # commit, and prepare() checks that the tag still names it.
 _commit=481094fdf34f11ed6d0d603ee59a858a0124236d
 _dist=${_distname}-${pkgver}
-pkgrel=4
+pkgrel=5
 pkgdesc="The open source CFD toolbox (www.openfoam.com)"
 arch=(x86_64)
 url="https://www.${pkgname//-/.}"
@@ -240,6 +240,13 @@ build() {
   # (with DISPLAY set but no X authority, it prints nothing).
   unset ParaView_DIR
   export QT_QPA_PLATFORM=offscreen
+
+  # CMake also searches <dir>/../lib/cmake for every <dir>/bin in PATH, ahead
+  # of /usr. With /opt/cuda/bin in PATH it finds ParaView and VTK through
+  # cuda's /opt/cuda/lib/cmake -> /usr/lib/cmake symlink, takes /opt/cuda as
+  # their prefix, and the plugin build fails on missing
+  # /opt/cuda/lib/vtk/hierarchy files. CMAKE_PREFIX_PATH is searched first.
+  export CMAKE_PREFIX_PATH=/usr
 
   echo "Compiling with ${_jval} parallel jobs"
   ./Allwmake -j "$_jval" -log=log.build
