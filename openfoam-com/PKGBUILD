@@ -17,7 +17,7 @@ pkgver=v2606
 # commit, and prepare() checks that the tag still names it.
 _commit=481094fdf34f11ed6d0d603ee59a858a0124236d
 _dist=${_distname}-${pkgver}
-pkgrel=5
+pkgrel=6
 pkgdesc="The open source CFD toolbox (www.openfoam.com)"
 arch=(x86_64)
 url="https://www.${pkgname//-/.}"
@@ -25,8 +25,9 @@ license=(GPL-3.0-or-later)
 install="${pkgname}.install"
 # From the binaries' NEEDED entries (readelf -d). adios2 is for the adios
 # module; paraview to vtk's libraries for the ParaView reader plugins. No
-# parmetis: OpenFOAM.com doesn't use it. kahip is disabled in prepare().
-depends=(gcc-libs glibc fftw gmp mpfr metis openmpi readline scotch zlib
+# parmetis: OpenFOAM.com doesn't use it. kahip and metis are disabled in
+# prepare().
+depends=(gcc-libs glibc fftw gmp mpfr openmpi readline scotch zlib
   adios2 paraview vtk qt6-base fmt freetype2 jsoncpp libglvnd onetbb protobuf) # petsc hypre
 # CGAL and the boost parts it uses are header-only. cli11 and fast_float are
 # for the ParaView reader plugins: vtk's CMake config (9.7.2) requires their
@@ -98,10 +99,12 @@ export WM_MPLIB=SYSTEMOPENMPI
     >"${projectDir}"/etc/prefs.sh
 
   # Configure components.
-  # Use system values for adios2, boost/cgal, fftw, metis, paraview, scotch
+  # Use system values for adios2, boost/cgal, fftw, paraview, scotch
   # -petsc petsc-system -hypre hypre-system -mpfr mpfr-system -gmp gmp-system
-  # kahip (kahipDecomp) is only in the AUR: disabled rather than building
-  # an unreviewed AUR package; scotch and metis cover decomposition.
+  # kahip (kahipDecomp) and metis (metisDecomp, with its gklib) are only in
+  # the AUR: disabled rather than building unreviewed AUR packages; scotch
+  # covers decomposition. OpenFOAM links its dummyThirdParty stubs instead,
+  # which fail only if a case selects the kahip or metis method.
   # ParaView takes plain "system": etc/config.sh/paraview only matches that,
   # and "paraview-system" (the AUR's value) left PV_PLUGIN_PATH unset, so
   # paraFoam never found the reader plugins. build() needs one more step.
@@ -112,7 +115,7 @@ export WM_MPLIB=SYSTEMOPENMPI
     -cgal cgal-system \
     -fftw fftw-system \
     -kahip kahip-none \
-    -metis metis-system \
+    -metis metis-none \
     -paraview system \
     -scotch scotch-system \
     ;
