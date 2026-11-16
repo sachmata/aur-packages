@@ -17,7 +17,7 @@ pkgver=v2606
 # commit, and prepare() checks that the tag still names it.
 _commit=481094fdf34f11ed6d0d603ee59a858a0124236d
 _dist=${_distname}-${pkgver}
-pkgrel=3
+pkgrel=4
 pkgdesc="The open source CFD toolbox (www.openfoam.com)"
 arch=(x86_64)
 url="https://www.${pkgname//-/.}"
@@ -28,8 +28,11 @@ install="${pkgname}.install"
 # parmetis: OpenFOAM.com doesn't use it. kahip is disabled in prepare().
 depends=(gcc-libs glibc fftw gmp mpfr metis openmpi readline scotch zlib
   adios2 paraview vtk qt6-base fmt freetype2 jsoncpp libglvnd onetbb protobuf) # petsc hypre
-# CGAL and the boost parts it uses are header-only
-makedepends=(git cmake flex cgal boost)
+# CGAL and the boost parts it uses are header-only. cli11 and fast_float are
+# for the ParaView reader plugins: vtk's CMake config (9.7.2) requires their
+# CMake packages but vtk only has them as makedepends, so find_package(ParaView)
+# fails without them.
+makedepends=(git cmake flex cgal boost cli11 fast_float)
 # The release tarball bundles these submodules (the others are left out);
 # their commits are pinned by the superproject commit. The source names carry
 # no version, so makepkg's git mirrors are reused across releases.
