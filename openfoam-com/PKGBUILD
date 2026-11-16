@@ -17,7 +17,7 @@ pkgver=v2606
 # commit, and prepare() checks that the tag still names it.
 _commit=481094fdf34f11ed6d0d603ee59a858a0124236d
 _dist=${_distname}-${pkgver}
-pkgrel=2
+pkgrel=3
 pkgdesc="The open source CFD toolbox (www.openfoam.com)"
 arch=(x86_64)
 url="https://www.${pkgname//-/.}"
@@ -101,7 +101,7 @@ export WM_MPLIB=SYSTEMOPENMPI
   # an unreviewed AUR package; scotch and metis cover decomposition.
   # ParaView takes plain "system": etc/config.sh/paraview only matches that,
   # and "paraview-system" (the AUR's value) left PV_PLUGIN_PATH unset, so
-  # paraFoam never found the reader plugins.
+  # paraFoam never found the reader plugins. build() needs one more step.
 
   "${projectDir}"/bin/tools/foamConfigurePaths \
     -adios adios-system \
@@ -229,8 +229,26 @@ build() {
   # job count above has no effect. Nested makes share the top one's jobserver.
   unset MAKEFLAGS
 
+  # ParaView_VERSION=system (prepare()) sets ParaView_DIR=/usr, and the
+  # plugin build then looks for a versioned /usr/include/paraview-X.Y, which
+  # Arch doesn't have (/usr/include/paraview): it skips the reader plugins.
+  # Without ParaView_DIR it takes the version from `paraview --version`,
+  # which is the Qt GUI: offscreen, it answers without a usable display
+  # (with DISPLAY set but no X authority, it prints nothing).
+  unset ParaView_DIR
+  export QT_QPA_PLATFORM=offscreen
+
   echo "Compiling with ${_jval} parallel jobs"
   ./Allwmake -j "$_jval" -log=log.build
+
+  # The plugins are optional for Allwmake, which only warns when they fail
+  local _plugin
+  for _plugin in ParaFoamReader ParaFoamBlockReader; do
+    compgen -G "${FOAM_LIBBIN}/paraview-*/${_plugin}.so" >/dev/null || {
+      echo "ParaView plugin ${_plugin} was not built, see log.build"
+      return 1
+    }
+  done
 
   # Check log for this type of content:
   #
