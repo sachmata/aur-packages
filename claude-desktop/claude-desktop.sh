@@ -33,4 +33,15 @@ if [[ -n ${WAYLAND_DISPLAY:-} || ${XDG_SESSION_TYPE:-} == wayland ]]; then
   done
 fi
 
+# fish 4.1+ queries the terminal for its Primary Device Attribute at
+# startup and waits up to 10 seconds for the reply. The Terminal panel's
+# xterm answers it once a tab is running, but not the query a new shell
+# sends, so every new tab stalls for 10 seconds and fish warns and turns
+# its other queries off. Turn the startup query off for shells the app
+# starts. fish reads this variable before config.fish, and an exported
+# value hides a universal fish_features, so any value already in the
+# environment is kept and extended. Drop this once fish starts in a new
+# panel tab without the warning.
+export fish_features="${fish_features:+$fish_features,}no-query-term"
+
 exec /usr/lib/claude-desktop/claude-desktop "${platform[@]}" "${flags[@]}" "$@"

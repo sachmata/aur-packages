@@ -9,7 +9,7 @@
 
 pkgname=claude-desktop
 pkgver=6.28899.6
-pkgrel=1
+pkgrel=2
 pkgdesc="Official Claude AI desktop app from Anthropic — Chat, Cowork, and Claude Code"
 arch=('x86_64' 'aarch64')
 url="https://claude.com/download"
@@ -111,7 +111,7 @@ source_aarch64=("${_repo}/${_pool}/${pkgname}_${pkgver}_arm64.deb"
                 "${pkgname}-${pkgver}-${pkgrel}-aarch64-Packages::${_repo}/dists/stable/main/binary-arm64/Packages")
 # The repository metadata changes with every release; it is verified by the
 # Release signature and the checks in prepare() instead
-sha256sums=('2b50c019e70b263750255c446bab8db6ab1e50c7396d37ef6547cf118131da65'
+sha256sums=('72d539d160c2cd14cd675eafa064e9d35b0a33bc09426444d9f9b9f5364571d1'
             '41dccc02c1aac3cda3887e2cf2f7ed088da15ad4d6b55b6dd469e0a5ed431ff7'
             'SKIP'
             'SKIP')
